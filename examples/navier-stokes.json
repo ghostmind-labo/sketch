@@ -1,0 +1,50 @@
+{
+  "mode": "animation",
+  "width": 1000,
+  "items": [
+    { "type": "text", "id": "eq", "x": 520, "y": 30, "align": "center", "size": 40,
+      "text": "\\id{rho}{ρ}\\id{acc}{(\\frac{∂\\vec{v}}{∂t} + (\\vec{v}⋅∇)\\vec{v})} = \\id{p}{−∇p} + \\id{g}{ρ\\vec{g}} + \\id{mu}{μ∇^{2}\\vec{v}}" },
+
+    { "type": "bracket", "around": "eq.rho", "color": "purple" },
+    { "type": "bracket", "around": "eq.acc", "color": "purple", "speed": 1.6 },
+    { "type": "bracket", "around": "eq.p", "color": "purple", "speed": 1.6 },
+    { "type": "bracket", "around": "eq.g", "color": "purple", "speed": 1.6 },
+    { "type": "bracket", "around": "eq.mu", "color": "purple", "speed": 1.6 },
+
+    { "type": "text", "id": "density", "below": "eq.rho", "gap": 80, "align": "center", "dx": -30, "size": 26, "color": "magenta", "text": "density" },
+    { "type": "arrow", "from": "eq.rho.bottom", "to": "density", "gap": 16, "color": "purple" },
+    { "type": "text", "id": "accel", "below": "eq.acc", "gap": 80, "align": "center", "size": 26, "color": "magenta", "text": "acceleration" },
+    { "type": "arrow", "from": "eq.acc.bottom", "to": "accel", "gap": 16, "color": "purple" },
+    { "type": "text", "id": "pressure", "below": "eq.p", "gap": 80, "align": "center", "size": 26, "color": "magenta", "text": "pressure" },
+    { "type": "arrow", "from": "eq.p.bottom", "to": "pressure", "gap": 16, "color": "purple" },
+    { "type": "text", "id": "gravity", "below": "eq.g", "gap": 80, "align": "center", "size": 26, "color": "magenta", "text": "~gravity" },
+    { "type": "arrow", "from": "eq.g.bottom", "to": "gravity", "gap": 16, "color": "purple" },
+    { "type": "text", "id": "visc", "below": "eq.mu", "gap": 80, "align": "center", "size": 26, "color": "magenta", "text": "viscosity" },
+    { "type": "arrow", "from": "eq.mu.bottom", "to": "visc", "gap": 16, "color": "purple" },
+
+    { "type": "pause", "ms": 600 },
+    { "type": "text", "id": "q", "x": 330, "y": 250, "size": 28, "text": "Is there a condition where math starts to\nbreak down?" },
+    { "type": "arrow", "from": [300, 205], "via": [[294, 262]], "to": "q.left", "gap": 8 },
+    { "type": "text", "id": "smooth", "below": "q", "gap": 44, "size": 28, "text": "does it always produce a smooth solution in\n3D space?" },
+    { "type": "bracket", "around": "smooth", "side": "left", "color": "green", "pad": 14 },
+    { "type": "bracket", "around": "smooth", "side": "right", "color": "green", "pad": 14 },
+
+    { "type": "text", "id": "unproven", "x": 872, "y": 236, "size": 22, "color": "blue", "text": "unproven" },
+    { "type": "underline", "under": "unproven", "color": "blue" },
+    { "type": "text", "id": "proof", "x": 700, "y": 318, "size": 24, "color": "blue", "text": "proof" },
+    { "type": "arrow", "from": "unproven.bottom", "to": "proof.right", "bend": -0.25, "gap": 12, "color": "blue" },
+    { "type": "text", "id": "counter", "below": "smooth", "gap": 22, "x": 690, "size": 24, "color": "blue", "text": "Counter-example" },
+    { "type": "arrow", "from": "unproven.bottom", "via": [[962, 420]], "to": "counter.right", "gap": 12, "color": "blue" },
+
+    { "type": "text", "id": "cd", "x": 40, "y": 330, "size": 24, "color": "yellow", "text": "- compute disparity\n- job security" },
+    { "type": "circle", "around": "cd", "color": "yellow" },
+
+    { "type": "text", "id": "openai", "x": 420, "y": 600, "size": 34, "color": "green", "text": "OpenAI" },
+    { "type": "text", "id": "agents", "rightOf": "openai", "gap": 80, "dy": -18, "size": 26, "text": "10,000 agents" },
+    { "type": "arrow", "from": "openai", "to": "agents", "gap": 10 },
+    { "type": "text", "id": "tokens", "below": "agents", "gap": 18, "size": 26, "text": "130B tokens" },
+    { "type": "box", "around": ["openai", "agents", "tokens"], "pad": 26, "color": "red" },
+    { "type": "text", "below": "tokens", "gap": 46, "x": 700, "size": 26, "color": "red", "text": "Alleged Cheating" },
+    { "type": "arrow", "from": "openai.left", "via": [[230, 560]], "to": "cd.bottom", "gap": 34, "color": "yellow" }
+  ]
+}

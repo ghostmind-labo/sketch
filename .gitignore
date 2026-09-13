@@ -1,0 +1,14 @@
+node_modules/
+dist/
+harness/index.html
+renders/
+*.tgz
+
+# secrets and local config — never commit
+.env
+.env.*
+.npmrc
+*.pem
+*.key
+
+.DS_Store

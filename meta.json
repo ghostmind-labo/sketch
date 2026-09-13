@@ -1,0 +1,37 @@
+{
+  "id": "kR7vQm2XsL9p",
+  "name": "sketch",
+  "version": "0.0.1",
+  "type": "project",
+  "herdr": {
+    "workspaces": [
+      {
+        "label": "sketch",
+        "tabs": [
+          {
+            "label": "dev",
+            "layout": "compact",
+            "focus": true,
+            "compact": {
+              "type": "main-side",
+              "panes": ["main", "side-top", "side-bottom"]
+            }
+          },
+          {
+            "label": "shell",
+            "layout": "compact",
+            "compact": {
+              "type": "single",
+              "panes": ["shell"]
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "routines": {
+    "herdr_init": "run herdr init sketch --all",
+    "herdr_attach": "run herdr attach sketch",
+    "herdr_terminate": "run herdr terminate sketch"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "mode": "static",
+  "width": 1000,
+  "items": [
+    { "type": "text", "id": "title", "x": 40, "y": 30, "size": 30, "color": "yellow", "text": "Chain rule" },
+    { "type": "underline", "under": "title", "color": "yellow" },
+
+    { "type": "text", "id": "rule", "x": 500, "y": 110, "align": "center", "size": 42,
+      "text": "\\frac{d}{dx} \\id{outer}{f}(\\id{inner}{g(x)}) = \\id{fp}{f'(g(x))} ⋅ \\id{gp}{g'(x)}" },
+
+    { "type": "circle", "around": "rule.inner", "color": "cyan", "pad": 12 },
+    { "type": "text", "id": "inside", "below": "rule.inner", "gap": 110, "align": "center", "dx": -60, "size": 24, "color": "cyan", "text": "the inside function" },
+    { "type": "arrow", "from": "rule.inner.bottom", "to": "inside", "gap": 30, "color": "cyan", "bend": 0.15 },
+
+    { "type": "brace", "around": "rule.fp", "color": "pink" },
+    { "type": "text", "id": "outerd", "below": "rule.fp", "gap": 50, "align": "center", "size": 24, "color": "pink", "text": "outside derivative,\ninside left alone" },
+
+    { "type": "brace", "around": "rule.gp", "color": "green" },
+    { "type": "text", "id": "innerd", "below": "rule.gp", "gap": 50, "align": "center", "dx": 40, "size": 24, "color": "green", "text": "times the\ninside's derivative" },
+
+    { "type": "text", "id": "ex", "x": 60, "y": 380, "size": 34, "text": "e.g.  \\frac{d}{dx} \\sin(x^{2}) = \\cos(x^{2}) ⋅ 2x" },
+    { "type": "box", "around": "ex", "color": "orange", "pad": 18 }
+  ]
+}
