@@ -1,4 +1,4 @@
-EMS Felix — single-stroke glyph data bundled in potion-sketch.
+EMS Felix — single-stroke glyph data bundled in @ghostmind-dev/sketch.
 Created by Sheldon B. Michaels; SVG font conversion by Windell H. Oskay.
 A derivative of Felipa, designed by Fontstage (https://fonts.google.com/specimen/Felipa).
 Converted here from SVG-font strokes to compact stroke coordinates.

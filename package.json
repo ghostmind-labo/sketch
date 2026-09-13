@@ -1,7 +1,7 @@
 {
   "name": "@ghostmind-dev/sketch",
-  "version": "0.1.0",
-  "description": "Hand-written explainer boards for Potion html blocks: one scene renders as a stroke-by-stroke animation or a static board.",
+  "version": "0.2.0",
+  "description": "Hand-written explainer boards for the browser: one scene renders as a stroke-by-stroke animation or a static board.",
   "license": "MIT",
   "files": [
     "dist",
@@ -14,7 +14,7 @@
   },
   "scripts": {
     "glyphs": "node scripts/build-glyphs.mjs",
-    "build": "npm run glyphs && esbuild src/index.ts --bundle --format=iife --global-name=PotionSketch --minify --target=es2020 --outfile=dist/sketch.iife.js",
+    "build": "npm run glyphs && esbuild src/index.ts --bundle --format=iife --global-name=Sketch --minify --target=es2020 --outfile=dist/sketch.iife.js",
     "check": "tsc --noEmit",
     "harness": "node harness/build-harness.mjs",
     "render": "node scripts/render.mjs",
@@ -24,8 +24,5 @@
     "esbuild": "^0.28.2",
     "hersheytext": "2.0.0",
     "typescript": "^5.9.0"
-  },
-  "dependencies": {
-    "@ghostmind-dev/sketch": "^0.1.0"
   }
 }
