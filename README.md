@@ -1,7 +1,7 @@
 # @ghostmind-dev/sketch
 
-Hand-written explainer boards for Potion `html` blocks — the look of a maths video
-recorded on an iPad. One scene (JSON) renders two ways:
+Hand-written explainer boards for the browser — the look of a maths video recorded on an
+iPad. One scene (JSON) renders two ways:
 
 - **animation** — handwriting, brackets, circles and arrows written stroke by stroke,
   with a play / scrub bar;
@@ -12,15 +12,15 @@ Every mark is an open pen stroke: Latin text uses a single-line handwriting font
 hand's wobble and overshoot. Nothing is a filled outline, so everything can be revealed
 along the path the pen took.
 
-One IIFE file (`dist/sketch.iife.js`, ~60 KB) defines `PotionSketch`. It needs no
-network, no workers and no fonts, and does nothing until called — it fits the Potion
-block sandbox as-is.
+One IIFE file (`dist/sketch.iife.js`, ~60 KB) defines the global `Sketch`. It needs no
+network, no workers and no web fonts, and does nothing until called — so it also runs in
+sandboxed iframes and under a strict Content-Security-Policy (inline it there).
 
-## In a note
+## Use it in a page
 
-````
 ```html
-<!-- potion:use @ghostmind-dev/sketch@0.1.0 -->
+<script src="https://cdn.jsdelivr.net/npm/@ghostmind-dev/sketch@0.2.0/dist/sketch.iife.js"></script>
+
 <script type="text/sketch">
 {
   "mode": "animation",
@@ -34,26 +34,27 @@ block sandbox as-is.
   ]
 }
 </script>
-<script>PotionSketch.mount();</script>
+<script>Sketch.mount();</script>
 ```
-````
 
 Change `"mode"` to `"static"` for the finished board with no animation.
 
-`mount()` renders every `<script type="text/sketch">` in place. `PotionSketch.board(el, scene, options)`
-does the same for one element and returns a controller (`play`, `pause`, `seek(ms)`, `restart`,
-`duration`); options (`mode`, `autoplay`, `controls`) override the scene's. A static board's
-controller does nothing.
+`Sketch.mount(root?)` renders every `<script type="text/sketch">` in place.
+`Sketch.board(el, scene, options)` does the same for one element (or a selector) and returns a
+controller (`play`, `pause`, `seek(ms)`, `restart`, `duration`); options (`mode`, `autoplay`,
+`controls`) override the scene's. A static board's controller does nothing.
+
+The board fills its container's width and sizes its own height, so no `100vh` or fixed height is needed.
 
 ## Scene
 
 ```jsonc
 {
   "mode": "animation",    // "animation" (written stroke by stroke) | "static" (finished board)
-  "width": 1000,          // board units across; the board scales to the note's width
+  "width": 1000,          // board units across; the board scales to its container's width
   "height": 600,          // optional — defaults to the ink's extent plus padding
-  "background": "#0c0c0e",// or "none" to write on the note itself
-  "color": "white",       // default ink
+  "background": "#0c0c0e",// or "none" to draw on the page itself
+  "color": "white",       // default ink; with "background": "none", white follows the page's text colour
   "speed": 1,             // animation: playback speed multiplier
   "autoplay": "visible",  // animation: true | false | "visible" (first time it scrolls into view)
   "controls": true,       // animation: play / scrub bar under the board
@@ -87,6 +88,8 @@ item); static boards ignore these.
 edge), an id with a side — `eq.bottom`, `.top`, `.left`, `.right`, `.center`, `.topLeft` … —
 or `{ "at": "eq.bottom", "dx": 0, "dy": 8 }`.
 
+An id can only be referenced once the item that defines it has been drawn (earlier in `items`).
+
 ### Text markup
 
 | write | get |
@@ -97,6 +100,7 @@ or `{ "at": "eq.bottom", "dx": 0, "dy": 8 }`.
 | `\sqrt{x}` · `\ul{x}` | root · underline |
 | `\id{name}{…}` | names part of the text: target it as `textId.name` |
 | `\alpha` `\partial` `\nabla` `\to` `\approx` … | symbols (or type ρ ∂ ∇ → directly) |
+| `\sin` `\cos` `\log` `\lim` … | written as the plain word |
 | `\n` | new line |
 
 In JSON, backslashes double: `"\\frac{a}{b}"`.
@@ -107,38 +111,21 @@ In JSON, backslashes double: `"\\frac{a}{b}"`.
 npm install
 npm run build                                   # glyphs → src/glyphs.generated.ts, bundle → dist/
 npm run check                                   # typecheck
-npm run harness                                 # harness/index.html: every example under the block CSP
+npm run harness                                 # harness/index.html: every example under a strict CSP
 npm run render -- examples/navier-stokes.json   # renders/navier-stokes.png, the finished board
 npm run render -- scene.json --at=2000,6000,end --debug --width=700
 ```
 
-`render` screenshots the board in headless Chrome under the sandbox's CSP (set `CHROME` if
-Chrome is not at the macOS default path). It is how a scene gets checked before it goes into
-a note.
+`render` screenshots the board in headless Chrome under a no-network CSP (set `CHROME` if
+Chrome is not at the macOS default path). It is the quickest way to check a scene's layout.
 
-## Publishing and registering
+## Publishing
 
 ```bash
-npm publish                     # scoped, public (publishConfig); prepublishOnly checks and builds
+npm version <patch|minor> && npm publish   # scoped, public (publishConfig); prepublishOnly checks and builds
 ```
 
-Later releases: `npm version patch && npm publish`. Never republish a version.
-
-Then add to `BLOCK_LIBRARIES` in Potion's `ui/app/src/lib/block-libraries.ts` (the key is what notes
-write; the directive parser splits on the last `@`, so a scoped name works):
-
-```ts
-'@ghostmind-dev/sketch': {
-  pkg: '@ghostmind-dev/sketch',
-  global: 'PotionSketch',
-  summary: 'Hand-written explainer boards: one scene renders as handwriting written stroke by stroke, or as the finished board.',
-  when: 'Explaining an equation or an idea the way a teacher would on a board. Plain HTML or mermaid stay the default for ordinary diagrams.',
-  builds: ['dist/sketch.iife.js'],
-},
-```
-
-and check `curl -s https://potion.run/api/vendor/@ghostmind-dev/sketch/0.1.0 | head -c 200`
-(the exact route shape for scoped names depends on Potion's vendor route).
+Never republish a version. jsDelivr picks new versions up from npm within minutes.
 
 ## Licences
 

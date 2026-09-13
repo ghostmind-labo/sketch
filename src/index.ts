@@ -1,12 +1,13 @@
-// potion-sketch — a scene description becomes a hand-written explainer board, either
+// sketch — a scene description becomes a hand-written explainer board, either
 // animated (written stroke by stroke) or static (the finished board).
 //
 // Everything is drawn as open pen strokes (single-line fonts, hand-built shapes), so every
-// mark can be revealed along its own path, the way a pen writes it. The IIFE runs inside a
-// sandboxed Potion block: no network, nothing touched until board() or mount() is called.
+// mark can be revealed along its own path, the way a pen writes it. The IIFE is self-contained
+// so it runs under a strict CSP: no network, no workers, nothing touched until board() or
+// mount() is called.
 import { GLYPHS } from './glyphs.generated';
 
-export const version = '0.1.0';
+export const version = '0.2.0';
 
 export type Pt = [number, number];
 export interface Rect { x: number; y: number; w: number; h: number }
@@ -731,18 +732,18 @@ function compile(scene: Scene) {
 // ─── DOM ──────────────────────────────────────────────────────────────────────
 
 const CSS = `
-.psk{display:block;width:100%;-webkit-user-select:none;user-select:none}
-.psk-board{position:relative;border-radius:12px;overflow:hidden;line-height:0}
-.psk-animated .psk-board{cursor:pointer;-webkit-tap-highlight-color:transparent}
-.psk-board svg{display:block;width:100%;height:auto}
-.psk-bar{display:flex;align-items:center;gap:8px;padding:8px 2px 0;font:12px/1 system-ui,-apple-system,sans-serif;opacity:.7}
-.psk-bar:hover{opacity:1}
-.psk-bar button{all:unset;cursor:pointer;width:28px;height:28px;display:grid;place-items:center;border-radius:7px;color:inherit}
-.psk-bar button:hover{background:rgba(127,127,127,.18)}
-.psk-bar svg{width:16px;height:16px;fill:currentColor}
-.psk-bar input{flex:1;min-width:0;accent-color:currentColor;margin:0}
-.psk-time{font-variant-numeric:tabular-nums;min-width:72px;text-align:right}
-.psk-error{font:13px/1.45 ui-monospace,Menlo,monospace;color:#f45b73;padding:10px 12px;border:1px solid rgba(244,91,115,.45);border-radius:8px;white-space:pre-wrap}`;
+.sketch{display:block;width:100%;-webkit-user-select:none;user-select:none}
+.sketch-board{position:relative;border-radius:12px;overflow:hidden;line-height:0}
+.sketch-animated .sketch-board{cursor:pointer;-webkit-tap-highlight-color:transparent}
+.sketch-board svg{display:block;width:100%;height:auto}
+.sketch-bar{display:flex;align-items:center;gap:8px;padding:8px 2px 0;font:12px/1 system-ui,-apple-system,sans-serif;opacity:.7}
+.sketch-bar:hover{opacity:1}
+.sketch-bar button{all:unset;cursor:pointer;width:28px;height:28px;display:grid;place-items:center;border-radius:7px;color:inherit}
+.sketch-bar button:hover{background:rgba(127,127,127,.18)}
+.sketch-bar svg{width:16px;height:16px;fill:currentColor}
+.sketch-bar input{flex:1;min-width:0;accent-color:currentColor;margin:0}
+.sketch-time{font-variant-numeric:tabular-nums;min-width:72px;text-align:right}
+.sketch-error{font:13px/1.45 ui-monospace,Menlo,monospace;color:#f45b73;padding:10px 12px;border:1px solid rgba(244,91,115,.45);border-radius:8px;white-space:pre-wrap}`;
 
 const ICON = {
   play: '<svg viewBox="0 0 16 16"><path d="M4 2.5v11l9.5-5.5z"/></svg>',
@@ -774,15 +775,15 @@ function inert(el: HTMLElement): Board {
 function showError(el: HTMLElement, e: unknown) {
   injectStyle();
   const d = document.createElement('div');
-  d.className = 'psk-error';
-  d.textContent = `potion-sketch: ${(e as Error)?.message ?? e}`;
+  d.className = 'sketch-error';
+  d.textContent = `sketch: ${(e as Error)?.message ?? e}`;
   el.replaceChildren(d);
 }
 
 /** Renders a scene into an element and returns its playback controller. */
 export function board(target: HTMLElement | string, scene: Scene, options: Partial<Options> = {}): Board {
   const el = typeof target === 'string' ? document.querySelector<HTMLElement>(target) : target;
-  if (!el) throw new Error(`potion-sketch: no element matches ${target}`);
+  if (!el) throw new Error(`sketch: no element matches ${target}`);
   injectStyle();
   try {
     return build(el, scene, options);
@@ -809,15 +810,15 @@ function build(el: HTMLElement, scene: Scene, options: Partial<Options>): Board 
     ? debug.map(([id, r]) => `<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" fill="none" stroke="#0ff" stroke-width="1" stroke-dasharray="4 3" opacity=".7"/><text x="${r.x}" y="${r.y - 4}" fill="#0ff" font-size="12" font-family="monospace">${id.replace(/[<&]/g, '')}</text>`).join('')
     : '';
 
-  el.innerHTML = `<div class="psk${animated ? ' psk-animated' : ''}">
-    <div class="psk-board" role="img" aria-label="Hand-drawn board">
+  el.innerHTML = `<div class="sketch${animated ? ' sketch-animated' : ''}">
+    <div class="sketch-board" role="img" aria-label="Hand-drawn board">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}">
         ${bg === 'none' ? '' : `<rect width="${width}" height="${height}" fill="${bg}"/>`}
         <g fill="none" stroke-linecap="round" stroke-linejoin="round">${paths}</g>
         ${dbg}
       </svg>
     </div>
-    ${animated && opts.controls ? `<div class="psk-bar"><button class="psk-play" aria-label="Play">${ICON.play}</button><input class="psk-seek" type="range" min="0" max="1000" value="0" aria-label="Scrub"><span class="psk-time">0:00 / 0:00</span></div>` : ''}
+    ${animated && opts.controls ? `<div class="sketch-bar"><button class="sketch-play" aria-label="Play">${ICON.play}</button><input class="sketch-seek" type="range" min="0" max="1000" value="0" aria-label="Scrub"><span class="sketch-time">0:00 / 0:00</span></div>` : ''}
   </div>`;
 
   // A static board is the finished drawing and nothing else: no timeline, no listeners.
@@ -826,9 +827,9 @@ function build(el: HTMLElement, scene: Scene, options: Partial<Options>): Board 
   const svg = el.querySelector('svg')!;
   const els = Array.from(svg.querySelectorAll<SVGPathElement>('g[fill="none"] > path'));
   const lens = els.map((p) => p.getTotalLength() || 0.01);
-  const playBtn = el.querySelector<HTMLButtonElement>('.psk-play');
-  const seekInput = el.querySelector<HTMLInputElement>('.psk-seek');
-  const timeLabel = el.querySelector<HTMLElement>('.psk-time');
+  const playBtn = el.querySelector<HTMLButtonElement>('.sketch-play');
+  const seekInput = el.querySelector<HTMLInputElement>('.sketch-seek');
+  const timeLabel = el.querySelector<HTMLElement>('.sketch-time');
   const duration = end + 600;
 
   let time = 0, playing = false, raf = 0, lastFrame = 0, scrubbing = false;

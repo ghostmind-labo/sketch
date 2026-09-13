@@ -1,4 +1,4 @@
-// Renders a scene to PNG in headless Chrome, under the block sandbox's CSP.
+// Renders a scene to PNG in headless Chrome, under a strict, no-network CSP.
 //
 //   node scripts/render.mjs examples/navier-stokes.json            → renders/navier-stokes.png (finished board)
 //   node scripts/render.mjs scene.json --at=1500,4000,end           → one PNG per moment
@@ -30,14 +30,14 @@ const outDir = resolve(String(flags.out ?? 'renders'));
 mkdirSync(outDir, { recursive: true });
 
 const name = basename(scenePath).replace(/\.json$/, '');
-const tmp = join(tmpdir(), `potion-sketch-${process.pid}.html`);
+const tmp = join(tmpdir(), `sketch-render-${process.pid}.html`);
 
 for (const at of moments) {
   const seek = at === 'end' ? 'b.duration' : String(Number(at));
   const body = `<div id="b"></div>
 <script>
 const scene = ${JSON.stringify(scene).replace(/</g, '\\u003c')};
-const b = PotionSketch.board('#b', scene, { autoplay: false, controls: false });
+const b = Sketch.board('#b', scene, { autoplay: false, controls: false });
 b.seek(${seek});
 document.title = 'duration:' + Math.round(b.duration);
 </script>`;

@@ -1,4 +1,5 @@
-// The Potion block sandbox, reproduced: same CSP, library inlined in <head>, content in <body>.
+// A locked-down page: no network, inline code only, library inlined in <head>, content in <body>.
+// If a board works here, it works in any sandboxed iframe or strict-CSP page.
 export const CSP = "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:; font-src data:; media-src data:; connect-src 'none'; form-action 'none'; base-uri 'none'";
 
 export function page(lib, body, { background = '#16161a', color = '#ececec', padding = '0' } = {}) {
