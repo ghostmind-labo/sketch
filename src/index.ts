@@ -5,9 +5,19 @@
 // mark can be revealed along its own path, the way a pen writes it. The IIFE is self-contained
 // so it runs under a strict CSP: no network, no workers, nothing touched until board() or
 // mount() is called.
-import { GLYPHS } from './glyphs.generated';
+import { FONTS, MATH } from './glyphs.generated';
+import { createScratch } from './sound';
 
-export const version = '0.2.0';
+export const version = '0.3.0';
+
+/** Handwriting fonts a scene or text item can name. */
+export const fonts = Object.keys(FONTS);
+const DEFAULT_FONT = 'readability';
+/**
+ * How much each letter drifts in size, angle, height and spacing. 0 draws text and maths clean and
+ * typeset-like; 1 gives a hand-written wobble. Annotations (circles, arrows, brackets) always wobble.
+ */
+const TEXT_WOBBLE = 0;
 
 export type Pt = [number, number];
 export interface Rect { x: number; y: number; w: number; h: number }
@@ -37,6 +47,8 @@ export interface TextItem extends Common {
   x?: number;
   y?: number;
   size?: number;
+  /** Handwriting font for this item; defaults to the scene's. */
+  font?: string;
   align?: 'left' | 'center' | 'right';
   below?: string;
   above?: string;
@@ -83,6 +95,10 @@ export interface Options {
   autoplay: boolean | 'visible';
   /** Play / scrub bar under an animated board. */
   controls: boolean;
+  /** Animation: a stylus rides the tip of each stroke as it is written. */
+  pencil: boolean;
+  /** Animation: a synthesised writing sound that follows the pen; starts after the first tap or click. */
+  sound: boolean;
 }
 
 export interface Scene extends Partial<Options> {
@@ -92,6 +108,8 @@ export interface Scene extends Partial<Options> {
   /** Board colour; 'none' draws on the note itself and 'white' ink follows the note's text colour. */
   background?: string;
   color?: string;
+  /** Handwriting font for all text: see `fonts`. */
+  font?: string;
   /** Global playback speed multiplier. */
   speed?: number;
   seed?: number;
@@ -109,6 +127,9 @@ export interface Board {
   pause(): void;
   seek(ms: number): void;
   restart(): void;
+  /** Whether the writing sound is on (always false when the scene has no sound). */
+  readonly sound: boolean;
+  setSound(on: boolean): void;
   destroy(): void;
 }
 
@@ -239,9 +260,10 @@ function pathD(pts: Pt[], smooth: boolean): string {
 interface Glyph { adv: number; strokes: Pt[][]; top: number; bottom: number }
 const glyphCache = new Map<string, Glyph | null>();
 
-function glyph(c: string): Glyph | null {
-  if (glyphCache.has(c)) return glyphCache.get(c)!;
-  const raw = GLYPHS[c];
+function glyph(c: string, font: string): Glyph | null {
+  const key = font + '\u0000' + c;
+  if (glyphCache.has(key)) return glyphCache.get(key)!;
+  const raw = FONTS[font]?.[c] ?? MATH[c];
   let g: Glyph | null = null;
   if (raw) {
     const strokes = raw[1] ? raw[1].split(';').map((s) => s.split(' ').map((p) => p.split(',').map(Number) as Pt)) : [];
@@ -249,7 +271,7 @@ function glyph(c: string): Glyph | null {
     for (const s of strokes) for (const [, y] of s) { top = Math.min(top, y); bottom = Math.max(bottom, y); }
     g = { adv: raw[0], strokes, top, bottom };
   }
-  glyphCache.set(c, g);
+  glyphCache.set(key, g);
   return g;
 }
 
@@ -321,7 +343,7 @@ function parse(src: string): Node[] {
 
 interface GS { pts: Pt[]; lift: number }
 interface Box { s: GS[]; w: number; asc: number; desc: number; marks: [string, Rect][] }
-interface Hand { R: Rng; phase: number; amp: number; wl: number }
+interface Hand { R: Rng; font: string; wob: number; phase: number; amp: number; wl: number }
 
 const LIFT = { stroke: 35, letter: 70, word: 190 };
 const emptyBox = (): Box => ({ s: [], w: 0, asc: 0, desc: 0, marks: [] });
@@ -343,19 +365,19 @@ function layout(nodes: Node[], size: number, H: Hand, x0 = 0): Box {
   for (const nd of nodes) {
     if (nd.k === 'ch') {
       if (nd.c === ' ' || nd.c === '\t') {
-        x += (glyph(' ')?.adv ?? 300) * (size / 1000) * (1 + R.n(0.18));
+        x += (glyph(' ', H.font)?.adv ?? 300) * (size / 1000) * (1 + R.n(0.18 * H.wob));
         lift = LIFT.word;
         continue;
       }
-      const g = glyph(nd.c) ?? glyph('?')!;
-      // Each letter is written a little differently: size, angle, height and spacing all drift.
-      const k = (size / 1000) * (1 + R.n(0.04));
-      const rot = R.n(0.045);
+      const g = glyph(nd.c, H.font) ?? glyph('?', H.font)!;
+      // With wobble, each letter is written a little differently: size, angle, height and spacing drift.
+      const k = (size / 1000) * (1 + R.n(0.04 * H.wob));
+      const rot = R.n(0.045 * H.wob);
       const cx = (g.adv * k) / 2, cy = -0.32 * size;
-      const dy = H.amp * Math.sin(((x0 + x) / H.wl) * 2 * Math.PI + H.phase) + R.n(0.014 * size);
+      const dy = H.amp * Math.sin(((x0 + x) / H.wl) * 2 * Math.PI + H.phase) + R.n(0.014 * size * H.wob);
       const cos = Math.cos(rot), sin = Math.sin(rot);
       g.strokes.forEach((st, si) => {
-        const ox = R.n(0.009 * size), oy = R.n(0.009 * size);
+        const ox = R.n(0.009 * size * H.wob), oy = R.n(0.009 * size * H.wob);
         let pts = st.map(([px, py]) => {
           const X = px * k - cx, Y = py * k - cy;
           return [x + cx + X * cos - Y * sin + ox, cy + X * sin + Y * cos + dy + oy] as Pt;
@@ -366,7 +388,7 @@ function layout(nodes: Node[], size: number, H: Hand, x0 = 0): Box {
       if (g.strokes.length) lift = LIFT.letter;
       box.asc = Math.max(box.asc, -g.top * k - dy);
       box.desc = Math.max(box.desc, g.bottom * k + dy);
-      x += g.adv * k * (1 + R.n(0.035));
+      x += g.adv * k * (1 + R.n(0.035 * H.wob));
     } else if (nd.k === 'sup' || nd.k === 'sub') {
       const b = layout(nd.n, size * 0.62, H, x0 + x);
       place(box, b, x + 0.02 * size, nd.k === 'sup' ? -0.44 * size : 0.2 * size, lift);
@@ -378,7 +400,8 @@ function layout(nodes: Node[], size: number, H: Hand, x0 = 0): Box {
       const w = Math.max(a.w, b.w) + 0.28 * size;
       const axis = -0.3 * size;
       place(box, a, x + (w - a.w) / 2, axis - 0.14 * size - Math.max(a.desc, 0.02 * size), lift);
-      box.s.push({ pts: handLine([x + 0.04 * size, axis + R.n(0.02 * size)], [x + w - 0.04 * size, axis + R.n(0.02 * size)], R, 4), lift: LIFT.letter });
+      const barA: Pt = [x + 0.04 * size, axis + R.n(0.02 * size * H.wob)], barB: Pt = [x + w - 0.04 * size, axis + R.n(0.02 * size * H.wob)];
+      box.s.push({ pts: H.wob ? handLine(barA, barB, R, 4) : [barA, barB], lift: LIFT.letter });
       place(box, b, x + (w - b.w) / 2, axis + 0.18 * size + Math.max(b.asc, 0.5 * s2));
       x += w + 0.06 * size;
       lift = LIFT.letter;
@@ -390,7 +413,7 @@ function layout(nodes: Node[], size: number, H: Hand, x0 = 0): Box {
         const yTop = -Math.max(c.asc, 0.55 * size) - 0.14 * size;
         const end = x + pad + c.w + 0.08 * size;
         box.s.push({
-          pts: [[x, -0.26 * size], [x + 0.13 * size, -0.34 * size], [x + 0.3 * size, 0.05 * size], [x + 0.52 * size, yTop], [end, yTop + R.n(0.03 * size)]],
+          pts: [[x, -0.26 * size], [x + 0.13 * size, -0.34 * size], [x + 0.3 * size, 0.05 * size], [x + 0.52 * size, yTop], [end, yTop + R.n(0.03 * size * H.wob)]],
           lift,
         });
         place(box, c, x + pad, 0);
@@ -408,7 +431,8 @@ function layout(nodes: Node[], size: number, H: Hand, x0 = 0): Box {
           const m = (x1 + x2) / 2;
           box.s.push({ pts: [[m, y], [m + 0.025 * size, y + 0.01 * size]], lift: LIFT.letter });
         } else {
-          const line = handLine([x1, y], [x2, y + R.n(0.025 * size)], R, 4);
+          const lineEnd: Pt = [x2, y + R.n(0.025 * size * H.wob)];
+          const line: Pt[] = H.wob ? handLine([x1, y], lineEnd, R, 4) : [[x1, y], lineEnd];
           box.s.push({ pts: line, lift: LIFT.letter });
           if (nd.d === 'vec') {
             const e = last(line), hs = 0.13 * size;
@@ -524,14 +548,16 @@ function compile(scene: Scene) {
 
       if (item.type === 'text') {
         const size = item.size ?? 32;
+        const font = item.font ?? scene.font ?? DEFAULT_FONT;
+        if (!FONTS[font]) throw new Error(`unknown font "${font}" — use one of: ${fonts.join(', ')}`);
         const nodes = parse(item.text);
         const lines: Node[][] = [[]];
         for (const n of nodes) n.k === 'nl' ? lines.push([]) : last(lines).push(n);
         const lh = (item.lineHeight ?? 1.45) * size;
-        const space = (glyph(' ')?.adv ?? 300) * (size / 1000);
+        const space = (glyph(' ', font)?.adv ?? 300) * (size / 1000);
         const boxes: Box[] = [];
         for (const ln of lines) {
-          const H: Hand = { R, phase: R.r() * 6.283, amp: 0.022 * size, wl: 8 * size };
+          const H: Hand = { R, font, wob: TEXT_WOBBLE, phase: R.r() * 6.283, amp: 0.022 * size * TEXT_WOBBLE, wl: 8 * size };
           if (!item.maxWidth) { boxes.push(layout(ln, size, H)); continue; }
           const words: Node[][] = [[]];
           for (const n of ln) (n.k === 'ch' && n.c === ' ') ? words.push([]) : last(words).push(n);
@@ -541,7 +567,7 @@ function compile(scene: Scene) {
             const b = layout(w, size, H, x);
             if (x > 0 && x + b.w > item.maxWidth) { boxes.push(cur); cur = emptyBox(); x = 0; }
             place(cur, b, x, 0, x > 0 ? LIFT.word : undefined);
-            x += b.w + space * (1 + R.n(0.15));
+            x += b.w + space * (1 + R.n(0.15 * TEXT_WOBBLE));
             cur.w = x - space;
           }
           boxes.push(cur);
@@ -566,7 +592,7 @@ function compile(scene: Scene) {
         }
         x = (x ?? 40) + (item.dx ?? 0);
         y = (y ?? 40) + (item.dy ?? 0);
-        const tilt = R.n(0.007);
+        const tilt = R.n(0.007 * TEXT_WOBBLE);
         const width = item.width ?? clamp(size * 0.07, 1.4, 6);
         const all: GS[] = [];
         boxes.forEach((b, j) => {
@@ -742,6 +768,7 @@ const CSS = `
 .sketch-bar button:hover{background:rgba(127,127,127,.18)}
 .sketch-bar svg{width:16px;height:16px;fill:currentColor}
 .sketch-bar input{flex:1;min-width:0;accent-color:currentColor;margin:0}
+.sketch-sound[aria-pressed="false"]{opacity:.6}
 .sketch-time{font-variant-numeric:tabular-nums;min-width:72px;text-align:right}
 .sketch-error{font:13px/1.45 ui-monospace,Menlo,monospace;color:#f45b73;padding:10px 12px;border:1px solid rgba(244,91,115,.45);border-radius:8px;white-space:pre-wrap}`;
 
@@ -749,7 +776,32 @@ const ICON = {
   play: '<svg viewBox="0 0 16 16"><path d="M4 2.5v11l9.5-5.5z"/></svg>',
   pause: '<svg viewBox="0 0 16 16"><path d="M3.5 2.5h3v11h-3zM9.5 2.5h3v11h-3z"/></svg>',
   replay: '<svg viewBox="0 0 16 16"><path d="M8 2.5a5.5 5.5 0 1 1-5.2 3.7l1.4.5A4 4 0 1 0 8 4v2L4.8 3.3 8 .5z"/></svg>',
+  soundOn: '<svg viewBox="0 0 16 16"><path d="M2 6h2.5L8 3v10L4.5 10H2z"/><path d="M10.2 5.2a4 4 0 0 1 0 5.6M12.2 3.4a6.5 6.5 0 0 1 0 9.2" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
+  soundOff: '<svg viewBox="0 0 16 16"><path d="M2 6h2.5L8 3v10L4.5 10H2z"/><path d="M10.5 6l4 4M14.5 6l-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
 };
+
+/** A stylus with its tip at the origin, lying along +x and then turned. The band near the tip takes the ink colour. */
+function pencilSVG(uid: number): string {
+  const grad = `sketch-pencil-grad-${uid}`, blur = `sketch-pencil-blur-${uid}`;
+  return `<g class="sketch-pencil" style="display:none">
+    <defs>
+      <linearGradient id="${grad}" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#ffffff"/><stop offset=".45" stop-color="#f0efea"/><stop offset="1" stop-color="#c4c1b9"/>
+      </linearGradient>
+      <filter id="${blur}" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="6"/></filter>
+    </defs>
+    <g class="sketch-pencil-shadow"><g transform="rotate(58)" fill="#000" opacity=".42" filter="url(#${blur})">
+      <path d="M0,0 L24,-6.5 L24,6.5Z"/><rect x="23" y="-7" width="304" height="14" rx="6"/>
+    </g></g>
+    <g class="sketch-pencil-body"><g transform="rotate(58)">
+      <path d="M0,0 L24,-6.5 L24,6.5Z" fill="#dedcd6"/>
+      <path d="M0,0 L7,-1.9 L7,1.9Z" fill="#3a3a3e"/>
+      <rect class="sketch-pencil-band" x="24" y="-7" width="6" height="14" fill="#f1f0ea"/>
+      <rect x="30" y="-7" width="290" height="14" fill="url(#${grad})"/>
+      <path d="M320,-7 h1 a7,7 0 0 1 0,14 h-1Z" fill="#dcdad3"/>
+    </g></g>
+  </g>`;
+}
 
 let styled = false;
 let uidCounter = 0;
@@ -769,7 +821,7 @@ const fmt = (ms: number) => {
 
 function inert(el: HTMLElement): Board {
   const noop = () => {};
-  return { el, duration: 0, time: 0, playing: false, play: noop, pause: noop, seek: noop, restart: noop, destroy: noop };
+  return { el, duration: 0, time: 0, playing: false, sound: false, play: noop, pause: noop, seek: noop, restart: noop, setSound: noop, destroy: noop };
 }
 
 function showError(el: HTMLElement, e: unknown) {
@@ -799,16 +851,20 @@ function build(el: HTMLElement, scene: Scene, options: Partial<Options>): Board 
     mode: options.mode ?? scene.mode ?? 'animation',
     autoplay: options.autoplay ?? scene.autoplay ?? 'visible',
     controls: options.controls ?? scene.controls ?? true,
+    pencil: options.pencil ?? scene.pencil ?? false,
+    sound: options.sound ?? scene.sound ?? false,
   };
   if (opts.mode !== 'animation' && opts.mode !== 'static') throw new Error(`mode must be "animation" or "static", not "${opts.mode}"`);
   const animated = opts.mode === 'animation';
   const { strokes, width, height, end, debug } = compile(scene);
   const bg = scene.background ?? '#0c0c0e';
+  const uid = ++uidCounter;
 
   const paths = strokes.map((s) => `<path d="${pathD(s.pts, true)}" stroke="${s.color}" stroke-width="${s.width}"/>`).join('');
   const dbg = scene.debug
     ? debug.map(([id, r]) => `<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" fill="none" stroke="#0ff" stroke-width="1" stroke-dasharray="4 3" opacity=".7"/><text x="${r.x}" y="${r.y - 4}" fill="#0ff" font-size="12" font-family="monospace">${id.replace(/[<&]/g, '')}</text>`).join('')
     : '';
+  const soundBtn = opts.sound ? `<button class="sketch-sound" aria-label="Sound" aria-pressed="true">${ICON.soundOn}</button>` : '';
 
   el.innerHTML = `<div class="sketch${animated ? ' sketch-animated' : ''}">
     <div class="sketch-board" role="img" aria-label="Hand-drawn board">
@@ -816,9 +872,10 @@ function build(el: HTMLElement, scene: Scene, options: Partial<Options>): Board 
         ${bg === 'none' ? '' : `<rect width="${width}" height="${height}" fill="${bg}"/>`}
         <g fill="none" stroke-linecap="round" stroke-linejoin="round">${paths}</g>
         ${dbg}
+        ${animated && opts.pencil ? pencilSVG(uid) : ''}
       </svg>
     </div>
-    ${animated && opts.controls ? `<div class="sketch-bar"><button class="sketch-play" aria-label="Play">${ICON.play}</button><input class="sketch-seek" type="range" min="0" max="1000" value="0" aria-label="Scrub"><span class="sketch-time">0:00 / 0:00</span></div>` : ''}
+    ${animated && opts.controls ? `<div class="sketch-bar"><button class="sketch-play" aria-label="Play">${ICON.play}</button><input class="sketch-seek" type="range" min="0" max="1000" value="0" aria-label="Scrub">${soundBtn}<span class="sketch-time">0:00 / 0:00</span></div>` : ''}
   </div>`;
 
   // A static board is the finished drawing and nothing else: no timeline, no listeners.
@@ -829,28 +886,75 @@ function build(el: HTMLElement, scene: Scene, options: Partial<Options>): Board 
   const lens = els.map((p) => p.getTotalLength() || 0.01);
   const playBtn = el.querySelector<HTMLButtonElement>('.sketch-play');
   const seekInput = el.querySelector<HTMLInputElement>('.sketch-seek');
+  const soundInput = el.querySelector<HTMLButtonElement>('.sketch-sound');
   const timeLabel = el.querySelector<HTMLElement>('.sketch-time');
-  const duration = end + 600;
+  const pencil = svg.querySelector<SVGGElement>('.sketch-pencil');
+  const pencilBody = svg.querySelector<SVGGElement>('.sketch-pencil-body');
+  const pencilShadow = svg.querySelector<SVGGElement>('.sketch-pencil-shadow');
+  const pencilBand = svg.querySelector<SVGElement>('.sketch-pencil-band');
+  const pencilScale = (width / 1000) * 0.7;
+  const offscreen: Pt = [width * 0.8 + 220, height + 240];
+  const duration = end + 900;
 
-  let time = 0, playing = false, raf = 0, lastFrame = 0, scrubbing = false;
+  const scratch = opts.sound ? createScratch() : null;
+  let soundOn = !!scratch;
+  let time = 0, playing = false, raf = 0, lastFrame = 0, scrubbing = false, lastActive = -1;
   const state: (boolean | undefined)[] = [];
   const ease = (u: number) => 0.5 * u + 0.5 * smoothstep(u);
+  const easeRate = (u: number) => 0.5 + 3 * u * (1 - u);
 
   function render(T: number) {
+    let active = -1, prev = -1, next = -1, prevEnd = -Infinity, nextStart = Infinity;
     for (let i = 0; i < strokes.length; i++) {
       const s = strokes[i], p = els[i], L = lens[i];
       const u = (T - s.t0) / s.dur;
       if (u <= 0) {
         if (state[i] !== false) { p.style.visibility = 'hidden'; state[i] = false; }
+        if (s.t0 < nextStart) { nextStart = s.t0; next = i; }
       } else if (u >= 1) {
         if (state[i] !== true) { p.style.visibility = ''; p.style.strokeDasharray = ''; p.style.strokeDashoffset = ''; state[i] = true; }
+        if (s.t0 + s.dur > prevEnd) { prevEnd = s.t0 + s.dur; prev = i; }
       } else {
         state[i] = undefined;
         p.style.visibility = '';
         p.style.strokeDasharray = `${L} ${L + 1}`;
         p.style.strokeDashoffset = String(L * (1 - ease(u)));
+        active = i;
       }
     }
+
+    if (scratch) {
+      if (playing && !scrubbing && soundOn && active >= 0) {
+        const s = strokes[active];
+        if (active !== lastActive) scratch.tap();
+        scratch.set((lens[active] / s.dur) * 1000 * easeRate((T - s.t0) / s.dur), true);
+      } else scratch.set(0, false);
+    }
+    lastActive = active;
+
+    if (!pencil || !pencilBody || !pencilShadow) return;
+    const visible = T > 0 && T < duration;
+    pencil.style.display = visible ? '' : 'none';
+    if (!visible) return;
+    let pos: Pt, lift = 0;
+    if (active >= 0) {
+      const s = strokes[active];
+      const q = els[active].getPointAtLength(lens[active] * ease((T - s.t0) / s.dur));
+      pos = [q.x, q.y];
+      if (pencilBand) pencilBand.setAttribute('fill', s.color);
+    } else {
+      // Pen lifted: glide from where the last stroke ended to where the next begins, raised a little.
+      const from = prev >= 0 ? last(strokes[prev].pts) : offscreen;
+      const to = next >= 0 ? strokes[next].pts[0] : offscreen;
+      const t0 = prev >= 0 ? prevEnd : 0;
+      const t1 = next >= 0 ? nextStart : prevEnd + 800;
+      const u = clamp((T - t0) / Math.max(1, t1 - t0), 0, 1);
+      pos = lerp(from, to, smoothstep(u));
+      lift = Math.sin(Math.PI * u) * clamp(dist(from, to) * 0.15, 4, 30);
+    }
+    const k = pencilScale * (1 + lift * 0.004);
+    pencilBody.setAttribute('transform', `translate(${pos[0]} ${pos[1] - lift}) scale(${k})`);
+    pencilShadow.setAttribute('transform', `translate(${pos[0] + 5 + lift * 0.8} ${pos[1] + 7 + lift * 0.6}) scale(${pencilScale})`);
   }
 
   function ui() {
@@ -858,6 +962,11 @@ function build(el: HTMLElement, scene: Scene, options: Partial<Options>): Board 
       const done = !playing && time >= duration;
       playBtn.innerHTML = playing ? ICON.pause : done ? ICON.replay : ICON.play;
       playBtn.setAttribute('aria-label', playing ? 'Pause' : done ? 'Replay' : 'Play');
+    }
+    if (soundInput) {
+      soundInput.innerHTML = soundOn ? ICON.soundOn : ICON.soundOff;
+      soundInput.setAttribute('aria-pressed', String(soundOn));
+      soundInput.setAttribute('aria-label', soundOn ? 'Mute' : 'Unmute');
     }
     if (seekInput && !scrubbing) seekInput.value = String(Math.round((time / duration) * 1000));
     if (timeLabel) timeLabel.textContent = `${fmt(Math.min(time, end))} / ${fmt(end)}`;
@@ -867,9 +976,10 @@ function build(el: HTMLElement, scene: Scene, options: Partial<Options>): Board 
     const dt = lastFrame ? now - lastFrame : 16;
     lastFrame = now;
     time = Math.min(duration, time + dt);
+    if (time >= duration) playing = false;
     render(time);
     ui();
-    if (time >= duration) { playing = false; lastFrame = 0; ui(); return; }
+    if (!playing) { lastFrame = 0; return; }
     raf = requestAnimationFrame(frame);
   }
 
@@ -879,6 +989,7 @@ function build(el: HTMLElement, scene: Scene, options: Partial<Options>): Board 
     duration,
     get time() { return time; },
     get playing() { return playing; },
+    get sound() { return soundOn; },
     play() {
       if (playing) return;
       if (time >= duration) time = 0;
@@ -890,6 +1001,7 @@ function build(el: HTMLElement, scene: Scene, options: Partial<Options>): Board 
     pause() {
       playing = false;
       cancelAnimationFrame(raf);
+      scratch?.set(0, false);
       ui();
     },
     seek(ms: number) {
@@ -897,12 +1009,24 @@ function build(el: HTMLElement, scene: Scene, options: Partial<Options>): Board 
       render(time);
       ui();
     },
+    setSound(on: boolean) {
+      soundOn = on && !!scratch;
+      if (soundOn) scratch!.resume();
+      else scratch?.set(0, false);
+      ui();
+    },
     restart() { api.pause(); api.seek(0); api.play(); },
-    destroy() { api.pause(); observer?.disconnect(); el.innerHTML = ''; },
+    destroy() { api.pause(); observer?.disconnect(); scratch?.close(); el.innerHTML = ''; },
   };
 
-  svg.parentElement!.addEventListener('click', () => (playing ? api.pause() : api.play()));
-  playBtn?.addEventListener('click', () => (playing ? api.pause() : api.play()));
+  // Audio may only start inside a user gesture, so every control wakes it before acting.
+  const toggle = () => {
+    if (soundOn) scratch?.resume();
+    playing ? api.pause() : api.play();
+  };
+  svg.parentElement!.addEventListener('click', toggle);
+  playBtn?.addEventListener('click', toggle);
+  soundInput?.addEventListener('click', () => api.setSound(!soundOn));
   seekInput?.addEventListener('input', () => {
     scrubbing = true;
     api.pause();

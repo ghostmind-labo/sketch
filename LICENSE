@@ -24,9 +24,9 @@ SOFTWARE.
 
 Bundled glyph data (dist/sketch.iife.js):
 
-- Latin letters: EMS Felix, by Sheldon B. Michaels, SVG conversion by
-  Windell H. Oskay; a derivative of Felipa by Fontstage. Licensed under the
-  SIL Open Font License 1.1 — see fonts/OFL.txt.
+- Latin letters: EMS Readability, by Sheldon B. Michaels, SVG conversion by
+  Windell H. Oskay; a derivative of Source Sans Pro Light by Paul D. Hunt,
+  Adobe. Licensed under the SIL Open Font License 1.1 — see fonts/OFL.txt.
 - Greek letters and mathematical symbols: the Hershey fonts (Dr. A. V. Hershey,
   U.S. National Bureau of Standards), as packaged by hersheytext
   (MIT, Copyright (c) 2014 James T).

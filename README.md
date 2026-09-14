@@ -7,10 +7,11 @@ iPad. One scene (JSON) renders two ways:
   with a play / scrub bar;
 - **static** — the finished board as a single image, nothing moving.
 
-Every mark is an open pen stroke: Latin text uses a single-line handwriting font
-(EMS Felix), Greek and maths symbols use Hershey strokes, and shapes are drawn with a
-hand's wobble and overshoot. Nothing is a filled outline, so everything can be revealed
-along the path the pen took.
+Every mark is an open pen stroke: text uses a clean single-line font (EMS Readability),
+Greek and maths symbols use Hershey strokes, and annotations — circles, arrows, brackets,
+boxes — are drawn with a hand's wobble and overshoot. Text and maths stay crisp so a board
+reads easily. Nothing is a filled outline, so everything can be revealed along the path the
+pen took.
 
 One IIFE file (`dist/sketch.iife.js`, ~60 KB) defines the global `Sketch`. It needs no
 network, no workers and no web fonts, and does nothing until called — so it also runs in
@@ -19,7 +20,7 @@ sandboxed iframes and under a strict Content-Security-Policy (inline it there).
 ## Use it in a page
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/@ghostmind-dev/sketch@0.2.0/dist/sketch.iife.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@ghostmind-dev/sketch@0.3.0/dist/sketch.iife.js"></script>
 
 <script type="text/sketch">
 {
@@ -46,6 +47,16 @@ controller (`play`, `pause`, `seek(ms)`, `restart`, `duration`); options (`mode`
 
 The board fills its container's width and sizes its own height, so no `100vh` or fixed height is needed.
 
+### Pencil and sound
+
+Both are off by default and apply to animations only. `"pencil": true` shows a stylus whose
+tip follows the stroke being written, lifting and gliding between strokes. `"sound": true`
+adds a writing sound, synthesised in the browser with Web Audio — noise shaped by the pen's
+speed, with a soft tap as each stroke begins; there are no audio files. Browsers only allow
+audio after a user gesture, so sound begins once the reader clicks play or taps the board (a
+board autoplaying on scroll stays silent until then). A speaker button in the bar mutes it;
+from code, `board.setSound(false)`.
+
 ## Scene
 
 ```jsonc
@@ -55,9 +66,12 @@ The board fills its container's width and sizes its own height, so no `100vh` or
   "height": 600,          // optional — defaults to the ink's extent plus padding
   "background": "#0c0c0e",// or "none" to draw on the page itself
   "color": "white",       // default ink; with "background": "none", white follows the page's text colour
+  "font": "readability",  // text font; `Sketch.fonts` lists what the bundle includes (a text item can set its own)
   "speed": 1,             // animation: playback speed multiplier
   "autoplay": "visible",  // animation: true | false | "visible" (first time it scrolls into view)
   "controls": true,       // animation: play / scrub bar under the board
+  "pencil": false,        // animation: a stylus rides the tip of each stroke as it is written
+  "sound": false,         // animation: a synthesised writing sound that follows the pen (adds a mute button)
   "seed": 0,              // change for different handwriting on the same scene
   "debug": false,         // outline every id
   "items": [ … ]          // drawn in order
@@ -74,7 +88,7 @@ item); static boards ignore these.
 
 | type | fields |
 |---|---|
-| `text` | `text`, `x`, `y` (top of the text), `size` (32), `align`, `maxWidth`, `lineHeight`; or place relative: `below` / `above` / `rightOf` / `leftOf` an id, with `gap`, `dx`, `dy` |
+| `text` | `text`, `x`, `y` (top of the text), `size` (32), `font`, `align`, `maxWidth`, `lineHeight`; or place relative: `below` / `above` / `rightOf` / `leftOf` an id, with `gap`, `dx`, `dy` |
 | `arrow` | `from`, `to`, optional `via` points, `bend` (−1…1), `gap`, `head` (`end` `start` `both` `none`) |
 | `line` | `points`, `smooth` |
 | `circle` · `box` | `around`, `pad` |
