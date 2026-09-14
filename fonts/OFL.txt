@@ -1,6 +1,7 @@
-EMS Felix — single-stroke glyph data bundled in @ghostmind-dev/sketch.
+EMS Readability — single-stroke glyph data bundled in @ghostmind-dev/sketch.
 Created by Sheldon B. Michaels; SVG font conversion by Windell H. Oskay.
-A derivative of Felipa, designed by Fontstage (https://fonts.google.com/specimen/Felipa).
+A derivative of Source Sans Pro Light, designed by Paul D. Hunt, Adobe
+(https://fonts.google.com/specimen/Source+Sans+Pro).
 Converted here from SVG-font strokes to compact stroke coordinates.
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.

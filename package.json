@@ -1,7 +1,27 @@
 {
   "name": "@ghostmind-dev/sketch",
-  "version": "0.2.0",
-  "description": "Hand-written explainer boards for the browser: one scene renders as a stroke-by-stroke animation or a static board.",
+  "version": "0.3.0",
+  "description": "Hand-written explainer boards for the browser: one scene renders as a stroke-by-stroke animation (optional pencil and writing sound) or a static board.",
+  "keywords": [
+    "whiteboard",
+    "blackboard",
+    "handwriting",
+    "explainer",
+    "math",
+    "svg",
+    "animation",
+    "diagram",
+    "education",
+    "annotation"
+  ],
+  "homepage": "https://github.com/ghostmind-labo/sketch#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ghostmind-labo/sketch.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ghostmind-labo/sketch/issues"
+  },
   "license": "MIT",
   "files": [
     "dist",
