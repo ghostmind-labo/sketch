@@ -41,7 +41,6 @@
     "prepublishOnly": "npm run build && npm run check"
   },
   "devDependencies": {
-    "@ghostmind-dev/fonts": "^0.1.0",
     "esbuild": "^0.28.2",
     "hersheytext": "2.0.0",
     "typescript": "^5.9.0"

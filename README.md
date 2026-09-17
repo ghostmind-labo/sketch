@@ -59,30 +59,9 @@ from code, `board.setSound(false)`.
 
 ### Fonts
 
-Text is written with single-stroke fonts — the path a pen travels, not a filled outline.
-`Sketch.fonts` lists what the bundle carries; a scene picks one with `"font"`, and any text item
-can override it:
-
-```json
-{ "font": "readability", "items": [
-  { "type": "text", "text": "clean by default" },
-  { "type": "text", "font": "casual", "text": "…and a second hand for asides" }
-] }
-```
-
-Greek and maths symbols are shared, so they work in every font.
-
-Handwriting fonts live in their own repo, [ghostmind-labo/fonts](https://github.com/ghostmind-labo/fonts),
-which stores each character as pen strokes and carries the tooling that traces them from written
-sheets. They are baked in at build time — a board renders in a sandbox with no network, so nothing
-can be fetched later. A build takes them from the first source it finds:
-
-```bash
-SKETCH_FONTS=../fonts/fonts npm run build   # a local clone, while working on a font
-npm install @ghostmind-dev/fonts            # the published package, for a normal build
-```
-
-Neither is implicit: with no source declared, a build ships `readability` alone.
+Text is written with **readability**, a single-stroke font — the path a pen travels, not a filled
+outline. `Sketch.fonts` lists what the bundle carries, and a scene or a single text item can name
+one with `"font"`. Greek and maths symbols come from a shared set and work regardless.
 
 ## Scene
 
