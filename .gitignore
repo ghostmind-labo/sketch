@@ -12,3 +12,5 @@ renders/
 *.key
 
 .DS_Store
+.venv/
+src/glyphs.generated.ts
