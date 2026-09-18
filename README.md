@@ -13,14 +13,14 @@ boxes — are drawn with a hand's wobble and overshoot. Text and maths stay cris
 reads easily. Nothing is a filled outline, so everything can be revealed along the path the
 pen took.
 
-One IIFE file (`dist/sketch.iife.js`, ~60 KB) defines the global `Sketch`. It needs no
+One IIFE file (`dist/sketch.iife.js`, ~68 KB) defines the global `Sketch`. It needs no
 network, no workers and no web fonts, and does nothing until called — so it also runs in
 sandboxed iframes and under a strict Content-Security-Policy (inline it there).
 
 ## Use it in a page
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/@ghostmind-dev/sketch@0.4.0/dist/sketch.iife.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@ghostmind-dev/sketch@0.5.0/dist/sketch.iife.js"></script>
 
 <script type="text/sketch">
 {
@@ -119,11 +119,13 @@ one with `"font"`. Greek and maths symbols come from a shared set and work regar
   "speed": 1,             // animation: playback speed multiplier
   "autoplay": "visible",  // animation: true | false | "visible" (first time it scrolls into view)
   "controls": true,       // animation: play / scrub bar under the board
-  "pencil": false,        // animation: a stylus rides the tip of each stroke as it is written
+  "pencil": false,        // animation: the tool at the pen tip — "pencil" | "marker" | "chalk" | "stylus" | "none"
+  "advance": "auto",      // animation: "click" waits for the reader at the end of each scene
   "sound": false,         // animation: a synthesised writing sound that follows the pen (adds a mute button)
   "seed": 0,              // change for different handwriting on the same scene
   "debug": false,         // outline every id
-  "items": [ … ]          // drawn in order
+  "items": [ … ],         // a single board, drawn in order
+  "scenes": [ … ]         // …or a sequence of them: see Scenes above
 }
 ```
 

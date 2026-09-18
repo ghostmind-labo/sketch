@@ -8,7 +8,7 @@
 import { FONTS, MATH } from './glyphs.generated';
 import { createScratch } from './sound';
 
-export const version = '0.4.0';
+export const version = '0.5.0';
 
 /** Handwriting fonts a scene or text item can name. */
 export const fonts = Object.keys(FONTS);
