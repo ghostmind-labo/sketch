@@ -1,0 +1,146 @@
+{
+  "mode": "animation",
+  "pencil": "chalk",
+  "advance": "click",
+  "width": 1000,
+  "height": 460,
+  "speed": 1.2,
+  "scenes": [
+    {
+      "label": "the question",
+      "items": [
+        {
+          "type": "text",
+          "id": "t",
+          "x": 60,
+          "y": 40,
+          "size": 38,
+          "color": "yellow",
+          "text": "What does a limit actually say?"
+        },
+        {
+          "type": "underline",
+          "under": "t",
+          "color": "yellow"
+        },
+        {
+          "type": "text",
+          "id": "f",
+          "x": 500,
+          "y": 170,
+          "align": "center",
+          "size": 52,
+          "text": "f(x) = \\frac{x^{2} − 1}{x − 1}"
+        },
+        {
+          "type": "text",
+          "id": "n",
+          "below": "f",
+          "gap": 60,
+          "align": "center",
+          "size": 28,
+          "color": "grey",
+          "text": "at x = 1 this is 0 / 0 — the formula says nothing"
+        },
+        {
+          "type": "text",
+          "id": "hint",
+          "below": "n",
+          "gap": 30,
+          "align": "center",
+          "size": 24,
+          "color": "cyan",
+          "text": "take your time, then ask for the next step"
+        }
+      ]
+    },
+    {
+      "label": "factor it",
+      "items": [
+        {
+          "type": "text",
+          "id": "t",
+          "x": 60,
+          "y": 40,
+          "size": 38,
+          "color": "yellow",
+          "text": "Factor the top"
+        },
+        {
+          "type": "text",
+          "id": "f",
+          "x": 500,
+          "y": 160,
+          "align": "center",
+          "size": 48,
+          "text": "\\frac{(x − 1)(x + 1)}{x − 1}"
+        },
+        {
+          "type": "text",
+          "id": "c",
+          "below": "f",
+          "gap": 56,
+          "align": "center",
+          "size": 44,
+          "color": "pink",
+          "text": "= x + 1,  for every x ≠ 1"
+        },
+        {
+          "type": "strike",
+          "over": "f",
+          "color": "grey"
+        }
+      ]
+    },
+    {
+      "label": "approach it",
+      "items": [
+        {
+          "type": "text",
+          "id": "t",
+          "x": 60,
+          "y": 40,
+          "size": 38,
+          "color": "yellow",
+          "text": "So walk towards 1"
+        },
+        {
+          "type": "text",
+          "id": "r",
+          "x": 500,
+          "y": 150,
+          "align": "center",
+          "size": 26,
+          "color": "grey",
+          "text": "x = 0.9 → 1.9        x = 0.99 → 1.99        x = 0.999 → 1.999"
+        },
+        {
+          "type": "text",
+          "id": "lim",
+          "below": "r",
+          "gap": 70,
+          "align": "center",
+          "size": 52,
+          "color": "green",
+          "text": "lim_{x→1} f(x) = 2"
+        },
+        {
+          "type": "box",
+          "around": "lim",
+          "pad": 26,
+          "color": "green"
+        },
+        {
+          "type": "text",
+          "id": "n",
+          "below": "lim",
+          "gap": 70,
+          "align": "center",
+          "size": 26,
+          "color": "grey",
+          "text": "never asking what happens at 1, only near it"
+        }
+      ]
+    }
+  ]
+}

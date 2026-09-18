@@ -13,14 +13,14 @@ boxes — are drawn with a hand's wobble and overshoot. Text and maths stay cris
 reads easily. Nothing is a filled outline, so everything can be revealed along the path the
 pen took.
 
-One IIFE file (`dist/sketch.iife.js`, ~60 KB) defines the global `Sketch`. It needs no
+One IIFE file (`dist/sketch.iife.js`, ~68 KB) defines the global `Sketch`. It needs no
 network, no workers and no web fonts, and does nothing until called — so it also runs in
 sandboxed iframes and under a strict Content-Security-Policy (inline it there).
 
 ## Use it in a page
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/@ghostmind-dev/sketch@0.3.0/dist/sketch.iife.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@ghostmind-dev/sketch@0.5.0/dist/sketch.iife.js"></script>
 
 <script type="text/sketch">
 {
@@ -40,6 +40,32 @@ sandboxed iframes and under a strict Content-Security-Policy (inline it there).
 
 Change `"mode"` to `"static"` for the finished board with no animation.
 
+### Scenes
+
+A lesson is rarely one board. Give `scenes` instead of `items` and each is written, held, then
+wiped before the next begins — the way a teacher fills a board, clears it, and carries on:
+
+```json
+{
+  "scenes": [
+    { "label": "the claim",   "items": [ … ],                 "hold": 1400 },
+    { "label": "the squares", "items": [ … ], "clear": "cut" },
+    { "label": "in numbers",  "items": [ … ] }
+  ]
+}
+```
+
+| field | does |
+|---|---|
+| `items` | that scene's board, drawn from nothing |
+| `label` | named in the control bar while it plays |
+| `hold` | ms the finished board is held before it clears (default 1200) |
+| `clear` | `"fade"` (default), `"cut"`, or `false` to leave it up |
+
+**Ids live inside a scene**, so every scene may reuse `title`, `eq` and the rest without clashing.
+The last scene stays on the board. A **static** board has no time, so its scenes stack down the
+page as a storyboard instead of replacing each other.
+
 `Sketch.mount(root?)` renders every `<script type="text/sketch">` in place.
 `Sketch.board(el, scene, options)` does the same for one element (or a selector) and returns a
 controller (`play`, `pause`, `seek(ms)`, `restart`, `duration`); options (`mode`, `autoplay`,
@@ -47,10 +73,27 @@ controller (`play`, `pause`, `seek(ms)`, `restart`, `duration`); options (`mode`
 
 The board fills its container's width and sizes its own height, so no `100vh` or fixed height is needed.
 
+### Letting the reader set the pace
+
+A board can wait rather than run on. With `"advance": "click"` each scene stops the moment its
+board is complete, and a **next** button appears over it; the story continues when the reader asks.
+Good when a scene needs thinking about, and the natural partner to narration later.
+
+```json
+{ "advance": "click", "scenes": [ … ] }
+```
+
+A single scene can ask for it on its own (`"advance": "click"` inside that scene), or opt out of a
+board that otherwise waits (`"advance": "auto"`). The last scene never waits — there is nothing
+after it.
+
 ### Pencil and sound
 
-Both are off by default and apply to animations only. `"pencil": true` shows a stylus whose
-tip follows the stroke being written, lifting and gliding between strokes. `"sound": true`
+Both are off by default and apply to animations only. `"pencil": true` shows a tool whose
+tip follows the stroke being written, lifting and gliding between strokes. Pick one with
+`"pencil": "pencil" | "marker" | "chalk" | "stylus"` — a short yellow pencil, a chunky marker with
+a blunt nib, a chalk stub, or the long stylus (`true` means `pencil`; `false` or `"none"` draws
+nothing). `"sound": true`
 adds a writing sound, synthesised in the browser with Web Audio — noise shaped by the pen's
 speed, with a soft tap as each stroke begins; there are no audio files. Browsers only allow
 audio after a user gesture, so sound begins once the reader clicks play or taps the board (a
@@ -59,30 +102,9 @@ from code, `board.setSound(false)`.
 
 ### Fonts
 
-Text is written with single-stroke fonts — the path a pen travels, not a filled outline.
-`Sketch.fonts` lists what the bundle carries; a scene picks one with `"font"`, and any text item
-can override it:
-
-```json
-{ "font": "readability", "items": [
-  { "type": "text", "text": "clean by default" },
-  { "type": "text", "font": "casual", "text": "…and a second hand for asides" }
-] }
-```
-
-Greek and maths symbols are shared, so they work in every font.
-
-Handwriting fonts live in their own repo, [ghostmind-labo/fonts](https://github.com/ghostmind-labo/fonts),
-which stores each character as pen strokes and carries the tooling that traces them from written
-sheets. They are baked in at build time — a board renders in a sandbox with no network, so nothing
-can be fetched later. A build takes them from the first source it finds:
-
-```bash
-SKETCH_FONTS=../fonts/fonts npm run build   # a local clone, while working on a font
-npm install @ghostmind-dev/fonts            # the published package, for a normal build
-```
-
-Neither is implicit: with no source declared, a build ships `readability` alone.
+Text is written with **readability**, a single-stroke font — the path a pen travels, not a filled
+outline. `Sketch.fonts` lists what the bundle carries, and a scene or a single text item can name
+one with `"font"`. Greek and maths symbols come from a shared set and work regardless.
 
 ## Scene
 
@@ -97,11 +119,13 @@ Neither is implicit: with no source declared, a build ships `readability` alone.
   "speed": 1,             // animation: playback speed multiplier
   "autoplay": "visible",  // animation: true | false | "visible" (first time it scrolls into view)
   "controls": true,       // animation: play / scrub bar under the board
-  "pencil": false,        // animation: a stylus rides the tip of each stroke as it is written
+  "pencil": false,        // animation: the tool at the pen tip — "pencil" | "marker" | "chalk" | "stylus" | "none"
+  "advance": "auto",      // animation: "click" waits for the reader at the end of each scene
   "sound": false,         // animation: a synthesised writing sound that follows the pen (adds a mute button)
   "seed": 0,              // change for different handwriting on the same scene
   "debug": false,         // outline every id
-  "items": [ … ]          // drawn in order
+  "items": [ … ],         // a single board, drawn in order
+  "scenes": [ … ]         // …or a sequence of them: see Scenes above
 }
 ```
 

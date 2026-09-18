@@ -1,6 +1,6 @@
 {
   "name": "@ghostmind-dev/sketch",
-  "version": "0.3.0",
+  "version": "0.5.0",
   "description": "Hand-written explainer boards for the browser: one scene renders as a stroke-by-stroke animation (optional pencil and writing sound) or a static board.",
   "keywords": [
     "whiteboard",
@@ -41,7 +41,6 @@
     "prepublishOnly": "npm run build && npm run check"
   },
   "devDependencies": {
-    "@ghostmind-dev/fonts": "^0.1.0",
     "esbuild": "^0.28.2",
     "hersheytext": "2.0.0",
     "typescript": "^5.9.0"

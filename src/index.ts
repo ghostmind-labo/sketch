@@ -8,7 +8,7 @@
 import { FONTS, MATH } from './glyphs.generated';
 import { createScratch } from './sound';
 
-export const version = '0.3.0';
+export const version = '0.5.0';
 
 /** Handwriting fonts a scene or text item can name. */
 export const fonts = Object.keys(FONTS);
@@ -85,8 +85,27 @@ export interface MarkItem extends Common {
   pad?: number;
   double?: boolean;
 }
+/** What holds the pen: a short pencil, a chunky marker, a chalk stub, or a long stylus. */
+export type PencilKind = 'pencil' | 'marker' | 'chalk' | 'stylus' | 'none';
+
 export interface PauseItem { type: 'pause'; ms: number }
 export type Item = TextItem | ArrowItem | LineItem | MarkItem | PauseItem;
+
+/**
+ * One scene in a sequence: its own board, drawn from nothing, wiped before the next one.
+ * Ids live inside a scene, so each may reuse the same names.
+ */
+export interface Chapter {
+  items: Item[];
+  /** 'click' holds this scene until the reader asks for the next one; overrides the board's setting. */
+  advance?: 'auto' | 'click';
+  /** Shown as a label while this scene plays. */
+  label?: string;
+  /** How long the finished board is held before it clears, in ms (default 1200). */
+  hold?: number;
+  /** How it leaves: 'fade' (default), 'cut' (instantly), or false to leave it on the board. */
+  clear?: 'fade' | 'cut' | false;
+}
 
 export interface Options {
   /** 'animation' writes the board stroke by stroke; 'static' shows the finished board. */
@@ -95,8 +114,13 @@ export interface Options {
   autoplay: boolean | 'visible';
   /** Play / scrub bar under an animated board. */
   controls: boolean;
-  /** Animation: a stylus rides the tip of each stroke as it is written. */
-  pencil: boolean;
+  /**
+   * Animation: something rides the tip of each stroke as it is written.
+   * true is the same as 'pencil'; 'none' (or false) draws nothing.
+   */
+  pencil: boolean | PencilKind;
+  /** Animation: pause at the end of each scene until the reader asks for the next one. */
+  advance: 'auto' | 'click';
   /** Animation: a synthesised writing sound that follows the pen; starts after the first tap or click. */
   sound: boolean;
 }
@@ -115,7 +139,13 @@ export interface Scene extends Partial<Options> {
   seed?: number;
   /** Outline every item and label its id — for laying a scene out. */
   debug?: boolean;
-  items: Item[];
+  /** A single board. Shorthand for one chapter; use "scenes" to tell a story in several. */
+  items?: Item[];
+  /**
+   * A sequence: each scene is written, held, then wiped before the next begins — a lesson
+   * in steps rather than one crowded board. A static board stacks them top to bottom instead.
+   */
+  scenes?: Chapter[];
 }
 
 export interface Board {
@@ -461,6 +491,10 @@ function layout(nodes: Node[], size: number, H: Hand, x0 = 0): Box {
 
 interface DrawStroke {
   pts: Pt[];
+  /** When this stroke's chapter clears (Infinity if it stays). */
+  gone?: number;
+  /** How long it takes to fade out; 0 cuts. */
+  fade?: number;
   color: string;
   width: number;
   lift: number;
@@ -474,7 +508,7 @@ interface DrawStroke {
 const SIDES = ['top', 'bottom', 'left', 'right', 'center', 'topLeft', 'topRight', 'bottomLeft', 'bottomRight'];
 const PEN_TEXT = 620, PEN_SHAPE = 1050;
 
-function compile(scene: Scene) {
+function compileChapter(scene: Scene, items: Item[]) {
   const W = scene.width ?? 1000;
   const reg = new Map<string, Rect>();
   const debug: [string, Rect][] = [];
@@ -537,7 +571,7 @@ function compile(scene: Scene) {
     return [p[0] + dx, p[1] + dy];
   };
 
-  scene.items.forEach((item, index) => {
+  items.forEach((item, index) => {
     const R = rng(hash(`${scene.seed ?? 0}:${index}:${JSON.stringify(item)}`));
     const strokes: Omit<DrawStroke, 't0' | 'dur'>[] = [];
     const add = (pts: Pt[], lift: number, c: Common, width: number, pen: number) =>
@@ -755,6 +789,52 @@ function compile(scene: Scene) {
   return { strokes: all, width: W, height, end: t, debug };
 }
 
+const HOLD_MS = 1200, CLEAR_MS = 700;
+
+/**
+ * Compiles a whole scene: one chapter, or a sequence of them.
+ *
+ * Animated, the chapters share the board — each is written, held, then wiped, and the next starts
+ * on a clean surface. Static, there is no time, so they stack down the page like a storyboard.
+ */
+function compile(scene: Scene) {
+  const chapters: Chapter[] = scene.scenes?.length ? scene.scenes : [{ items: scene.items ?? [] }];
+  const animated = (scene.mode ?? 'animation') !== 'static';
+  const all: DrawStroke[] = [];
+  const debug: [string, Rect][] = [];
+  const marks: { start: number; gate: number; label?: string; advance?: 'auto' | 'click' }[] = [];
+  let width = scene.width ?? 1000;
+  let height = 0, clock = 0, offsetY = 0;
+
+  chapters.forEach((chapter, i) => {
+    const part = compileChapter(scene, chapter.items ?? []);
+    const isLast = i === chapters.length - 1;
+    const hold = chapter.hold ?? (isLast ? 0 : HOLD_MS);
+    const clear = chapter.clear ?? (isLast ? false : 'fade');
+    const fade = clear === 'fade' ? CLEAR_MS : 0;
+    const goneAt = clock + part.end + hold;
+
+    marks.push({ start: clock, gate: clock + part.end, label: chapter.label, advance: chapter.advance });
+    for (const stroke of part.strokes) {
+      all.push({
+        ...stroke,
+        t0: stroke.t0 + clock,
+        pts: animated ? stroke.pts : stroke.pts.map(([x, y]) => [x, y + offsetY] as Pt),
+        gone: clear ? goneAt : Infinity,
+        fade,
+      });
+    }
+    for (const [id, r] of part.debug) debug.push([id, animated ? r : { ...r, y: r.y + offsetY }]);
+
+    width = part.width;
+    if (animated) height = Math.max(height, part.height);
+    else { height += part.height + (isLast ? 0 : 24); offsetY += part.height + 24; }
+    clock = goneAt + fade;
+  });
+
+  return { strokes: all, width, height: Math.max(160, height), end: clock, debug, chapters: marks };
+}
+
 // ─── DOM ──────────────────────────────────────────────────────────────────────
 
 const CSS = `
@@ -770,6 +850,9 @@ const CSS = `
 .sketch-bar input{flex:1;min-width:0;accent-color:currentColor;margin:0}
 .sketch-sound[aria-pressed="false"]{opacity:.6}
 .sketch-time{font-variant-numeric:tabular-nums;min-width:72px;text-align:right}
+.sketch-next{position:absolute;right:14px;bottom:12px;display:none;align-items:center;gap:7px;padding:7px 13px;border-radius:999px;background:rgba(240,240,235,.92);color:#16161a;font:600 13px/1 system-ui,sans-serif;cursor:pointer;border:0;box-shadow:0 2px 10px rgba(0,0,0,.35)}
+.sketch-next svg{width:13px;height:13px;fill:currentColor}
+.sketch-waiting .sketch-next{display:flex}
 .sketch-error{font:13px/1.45 ui-monospace,Menlo,monospace;color:#f45b73;padding:10px 12px;border:1px solid rgba(244,91,115,.45);border-radius:8px;white-space:pre-wrap}`;
 
 const ICON = {
@@ -778,27 +861,51 @@ const ICON = {
   replay: '<svg viewBox="0 0 16 16"><path d="M8 2.5a5.5 5.5 0 1 1-5.2 3.7l1.4.5A4 4 0 1 0 8 4v2L4.8 3.3 8 .5z"/></svg>',
   soundOn: '<svg viewBox="0 0 16 16"><path d="M2 6h2.5L8 3v10L4.5 10H2z"/><path d="M10.2 5.2a4 4 0 0 1 0 5.6M12.2 3.4a6.5 6.5 0 0 1 0 9.2" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
   soundOff: '<svg viewBox="0 0 16 16"><path d="M2 6h2.5L8 3v10L4.5 10H2z"/><path d="M10.5 6l4 4M14.5 6l-4 4" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>',
+  next: '<svg viewBox="0 0 16 16"><path d="M3.5 2.5v11l8-5.5z"/><path d="M12.5 2.5h1.6v11h-1.6z"/></svg>',
 };
 
-/** A stylus with its tip at the origin, lying along +x and then turned. The band near the tip takes the ink colour. */
-function pencilSVG(uid: number): string {
+/**
+ * The tool at the pen tip, drawn with its point at the origin, lying along +x and then turned.
+ * Each kind is a different length and build, because a long stylus dominates a small board:
+ * a pencil is stubbier, a marker chunkier, chalk shorter still.
+ */
+const TOOLS: Record<Exclude<PencilKind, 'none'>, { len: number; w: number; body: string; shade: string; tip: string; band: boolean }> = {
+  pencil:  { len: 210, w: 13, body: '#f0c24a', shade: '#b9761f', tip: '#e8d9b8', band: true },
+  marker:  { len: 150, w: 21, body: '#4a4a52', shade: '#26262c', tip: '#2e2e34', band: true },
+  chalk:   { len: 95,  w: 17, body: '#efeee9', shade: '#cfcdc4', tip: '#e2e0d8', band: false },
+  stylus:  { len: 320, w: 14, body: '#f3f2ee', shade: '#b9b6ae', tip: '#dedcd6', band: true },
+};
+
+function pencilSVG(uid: number, kind: Exclude<PencilKind, 'none'> = 'pencil'): string {
   const grad = `sketch-pencil-grad-${uid}`, blur = `sketch-pencil-blur-${uid}`;
+  const tool = TOOLS[kind] ?? TOOLS.pencil;
+  const half = tool.w / 2;
+  const nib = kind === 'marker' ? 16 : 24;          // a marker has a blunt nib, a pencil a point
+  const bandW = tool.band ? 7 : 0;
+  const bodyStart = nib + bandW;
+  const bodyLen = tool.len - bodyStart;
+  const shade = tool.shade;
   return `<g class="sketch-pencil" style="display:none">
     <defs>
       <linearGradient id="${grad}" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stop-color="#ffffff"/><stop offset=".45" stop-color="#f0efea"/><stop offset="1" stop-color="#c4c1b9"/>
+        <stop offset="0" stop-color="#ffffff" stop-opacity=".55"/>
+        <stop offset=".4" stop-color="${tool.body}"/>
+        <stop offset="1" stop-color="${shade}"/>
       </linearGradient>
       <filter id="${blur}" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="6"/></filter>
     </defs>
     <g class="sketch-pencil-shadow"><g transform="rotate(58)" fill="#000" opacity=".42" filter="url(#${blur})">
-      <path d="M0,0 L24,-6.5 L24,6.5Z"/><rect x="23" y="-7" width="304" height="14" rx="6"/>
+      <path d="M0,0 L${nib},-${half} L${nib},${half}Z"/>
+      <rect x="${nib - 1}" y="-${half}" width="${tool.len - nib + 2}" height="${tool.w}" rx="${half * 0.7}"/>
     </g></g>
     <g class="sketch-pencil-body"><g transform="rotate(58)">
-      <path d="M0,0 L24,-6.5 L24,6.5Z" fill="#dedcd6"/>
-      <path d="M0,0 L7,-1.9 L7,1.9Z" fill="#3a3a3e"/>
-      <rect class="sketch-pencil-band" x="24" y="-7" width="6" height="14" fill="#f1f0ea"/>
-      <rect x="30" y="-7" width="290" height="14" fill="url(#${grad})"/>
-      <path d="M320,-7 h1 a7,7 0 0 1 0,14 h-1Z" fill="#dcdad3"/>
+      <path d="M0,0 L${nib},-${half} L${nib},${half}Z" fill="${tool.tip}"/>
+      ${kind === 'marker'
+        ? `<path d="M0,-3.5 L10,-${half} L10,${half} L0,3.5Z" fill="#2a2a30"/>`
+        : `<path d="M0,0 L7,-1.9 L7,1.9Z" fill="#3a3a3e"/>`}
+      ${tool.band ? `<rect class="sketch-pencil-band" x="${nib}" y="-${half}" width="${bandW}" height="${tool.w}" fill="#f1f0ea"/>` : ''}
+      <rect x="${bodyStart}" y="-${half}" width="${bodyLen}" height="${tool.w}" fill="url(#${grad})"/>
+      <path d="M${tool.len},-${half} h1 a${half},${half} 0 0 1 0,${tool.w} h-1Z" fill="${shade}"/>
     </g></g>
   </g>`;
 }
@@ -846,17 +953,24 @@ export function board(target: HTMLElement | string, scene: Scene, options: Parti
 }
 
 function build(el: HTMLElement, scene: Scene, options: Partial<Options>): Board {
-  if (!scene || !Array.isArray(scene.items)) throw new Error('a scene needs an "items" array');
+  if (!scene || (!Array.isArray(scene.items) && !Array.isArray(scene.scenes))) {
+    throw new Error('a scene needs an "items" array, or a "scenes" array of them');
+  }
   const opts: Options = {
     mode: options.mode ?? scene.mode ?? 'animation',
     autoplay: options.autoplay ?? scene.autoplay ?? 'visible',
     controls: options.controls ?? scene.controls ?? true,
     pencil: options.pencil ?? scene.pencil ?? false,
     sound: options.sound ?? scene.sound ?? false,
+    advance: options.advance ?? scene.advance ?? 'auto',
   };
+  const toolKind: PencilKind = opts.pencil === true ? 'pencil' : opts.pencil === false ? 'none' : opts.pencil;
+  if (toolKind !== 'none' && !TOOLS[toolKind]) {
+    throw new Error(`pencil must be one of: ${Object.keys(TOOLS).join(', ')}, none — not "${toolKind}"`);
+  }
   if (opts.mode !== 'animation' && opts.mode !== 'static') throw new Error(`mode must be "animation" or "static", not "${opts.mode}"`);
   const animated = opts.mode === 'animation';
-  const { strokes, width, height, end, debug } = compile(scene);
+  const { strokes, width, height, end, debug, chapters } = compile(scene);
   const bg = scene.background ?? '#0c0c0e';
   const uid = ++uidCounter;
 
@@ -872,8 +986,9 @@ function build(el: HTMLElement, scene: Scene, options: Partial<Options>): Board 
         ${bg === 'none' ? '' : `<rect width="${width}" height="${height}" fill="${bg}"/>`}
         <g fill="none" stroke-linecap="round" stroke-linejoin="round">${paths}</g>
         ${dbg}
-        ${animated && opts.pencil ? pencilSVG(uid) : ''}
+        ${animated && toolKind !== 'none' ? pencilSVG(uid, toolKind) : ''}
       </svg>
+      ${animated ? `<button class="sketch-next" aria-label="Next scene">next ${ICON.next}</button>` : ''}
     </div>
     ${animated && opts.controls ? `<div class="sketch-bar"><button class="sketch-play" aria-label="Play">${ICON.play}</button><input class="sketch-seek" type="range" min="0" max="1000" value="0" aria-label="Scrub">${soundBtn}<span class="sketch-time">0:00 / 0:00</span></div>` : ''}
   </div>`;
@@ -896,6 +1011,14 @@ function build(el: HTMLElement, scene: Scene, options: Partial<Options>): Board 
   const offscreen: Pt = [width * 0.8 + 220, height + 240];
   const duration = end + 900;
 
+  const wrap = el.querySelector<HTMLElement>('.sketch')!;
+  const nextBtn = el.querySelector<HTMLButtonElement>('.sketch-next');
+  /** Where playback stops and waits, in order: the end of every scene that asks to be held. */
+  const gates = chapters
+    .filter((c, i) => (c.advance ?? opts.advance) === 'click' && i < chapters.length - 1)
+    .map((c) => c.gate);
+  let waiting = false;
+
   const scratch = opts.sound ? createScratch() : null;
   let soundOn = !!scratch;
   let time = 0, playing = false, raf = 0, lastFrame = 0, scrubbing = false, lastActive = -1;
@@ -907,6 +1030,19 @@ function build(el: HTMLElement, scene: Scene, options: Partial<Options>): Board 
     let active = -1, prev = -1, next = -1, prevEnd = -Infinity, nextStart = Infinity;
     for (let i = 0; i < strokes.length; i++) {
       const s = strokes[i], p = els[i], L = lens[i];
+      const gone = s.gone ?? Infinity;
+      if (T >= gone) {                                 // this chapter has been wiped
+        const left = s.fade ? Math.max(0, 1 - (T - gone) / s.fade) : 0;
+        if (left <= 0) {
+          if (state[i] !== false) { p.style.visibility = 'hidden'; p.style.opacity = ''; state[i] = false; }
+        } else {
+          p.style.visibility = '';
+          p.style.opacity = String(left);
+          state[i] = undefined;
+        }
+        continue;
+      }
+      if (p.style.opacity) p.style.opacity = '';       // scrubbed back into the chapter's life
       const u = (T - s.t0) / s.dur;
       if (u <= 0) {
         if (state[i] !== false) { p.style.visibility = 'hidden'; state[i] = false; }
@@ -969,13 +1105,35 @@ function build(el: HTMLElement, scene: Scene, options: Partial<Options>): Board 
       soundInput.setAttribute('aria-label', soundOn ? 'Mute' : 'Unmute');
     }
     if (seekInput && !scrubbing) seekInput.value = String(Math.round((time / duration) * 1000));
-    if (timeLabel) timeLabel.textContent = `${fmt(Math.min(time, end))} / ${fmt(end)}`;
+    if (timeLabel) {
+      let prefix = '';
+      if (chapters.length > 1) {
+        let at = 0;
+        for (let i = 0; i < chapters.length; i++) if (time >= chapters[i].start) at = i;
+        prefix = `${chapters[at].label ?? at + 1 + '/' + chapters.length} · `;
+      }
+      timeLabel.textContent = `${prefix}${fmt(Math.min(time, end))} / ${fmt(end)}`;
+    }
   }
 
   function frame(now: number) {
     const dt = lastFrame ? now - lastFrame : 16;
     lastFrame = now;
-    time = Math.min(duration, time + dt);
+    const wanted = Math.min(duration, time + dt);
+    // A scene that asks to be held stops the clock the moment its board is complete, so the
+    // reader can take it in; the next scene starts only when they say so.
+    const gate = gates.find((g) => time < g && wanted >= g);
+    if (gate !== undefined) {
+      time = gate;
+      playing = false;
+      waiting = true;
+      wrap.classList.add('sketch-waiting');
+      scratch?.set(0, false);
+      render(time);
+      ui();
+      return;
+    }
+    time = wanted;
     if (time >= duration) playing = false;
     render(time);
     ui();
@@ -992,6 +1150,7 @@ function build(el: HTMLElement, scene: Scene, options: Partial<Options>): Board 
     get sound() { return soundOn; },
     play() {
       if (playing) return;
+      if (waiting) { waiting = false; wrap.classList.remove('sketch-waiting'); time += 1; }
       if (time >= duration) time = 0;
       playing = true;
       lastFrame = 0;
@@ -1024,6 +1183,7 @@ function build(el: HTMLElement, scene: Scene, options: Partial<Options>): Board 
     if (soundOn) scratch?.resume();
     playing ? api.pause() : api.play();
   };
+  nextBtn?.addEventListener('click', (e) => { e.stopPropagation(); api.play(); });
   svg.parentElement!.addEventListener('click', toggle);
   playBtn?.addEventListener('click', toggle);
   soundInput?.addEventListener('click', () => api.setSound(!soundOn));
