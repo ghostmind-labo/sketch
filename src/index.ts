@@ -8,7 +8,7 @@
 import { FONTS, MATH } from './glyphs.generated';
 import { createScratch } from './sound';
 
-export const version = '0.3.0';
+export const version = '0.4.0';
 
 /** Handwriting fonts a scene or text item can name. */
 export const fonts = Object.keys(FONTS);
@@ -88,6 +88,20 @@ export interface MarkItem extends Common {
 export interface PauseItem { type: 'pause'; ms: number }
 export type Item = TextItem | ArrowItem | LineItem | MarkItem | PauseItem;
 
+/**
+ * One scene in a sequence: its own board, drawn from nothing, wiped before the next one.
+ * Ids live inside a scene, so each may reuse the same names.
+ */
+export interface Chapter {
+  items: Item[];
+  /** Shown as a label while this scene plays. */
+  label?: string;
+  /** How long the finished board is held before it clears, in ms (default 1200). */
+  hold?: number;
+  /** How it leaves: 'fade' (default), 'cut' (instantly), or false to leave it on the board. */
+  clear?: 'fade' | 'cut' | false;
+}
+
 export interface Options {
   /** 'animation' writes the board stroke by stroke; 'static' shows the finished board. */
   mode: 'animation' | 'static';
@@ -115,7 +129,13 @@ export interface Scene extends Partial<Options> {
   seed?: number;
   /** Outline every item and label its id — for laying a scene out. */
   debug?: boolean;
-  items: Item[];
+  /** A single board. Shorthand for one chapter; use "scenes" to tell a story in several. */
+  items?: Item[];
+  /**
+   * A sequence: each scene is written, held, then wiped before the next begins — a lesson
+   * in steps rather than one crowded board. A static board stacks them top to bottom instead.
+   */
+  scenes?: Chapter[];
 }
 
 export interface Board {
@@ -461,6 +481,10 @@ function layout(nodes: Node[], size: number, H: Hand, x0 = 0): Box {
 
 interface DrawStroke {
   pts: Pt[];
+  /** When this stroke's chapter clears (Infinity if it stays). */
+  gone?: number;
+  /** How long it takes to fade out; 0 cuts. */
+  fade?: number;
   color: string;
   width: number;
   lift: number;
@@ -474,7 +498,7 @@ interface DrawStroke {
 const SIDES = ['top', 'bottom', 'left', 'right', 'center', 'topLeft', 'topRight', 'bottomLeft', 'bottomRight'];
 const PEN_TEXT = 620, PEN_SHAPE = 1050;
 
-function compile(scene: Scene) {
+function compileChapter(scene: Scene, items: Item[]) {
   const W = scene.width ?? 1000;
   const reg = new Map<string, Rect>();
   const debug: [string, Rect][] = [];
@@ -537,7 +561,7 @@ function compile(scene: Scene) {
     return [p[0] + dx, p[1] + dy];
   };
 
-  scene.items.forEach((item, index) => {
+  items.forEach((item, index) => {
     const R = rng(hash(`${scene.seed ?? 0}:${index}:${JSON.stringify(item)}`));
     const strokes: Omit<DrawStroke, 't0' | 'dur'>[] = [];
     const add = (pts: Pt[], lift: number, c: Common, width: number, pen: number) =>
@@ -755,6 +779,52 @@ function compile(scene: Scene) {
   return { strokes: all, width: W, height, end: t, debug };
 }
 
+const HOLD_MS = 1200, CLEAR_MS = 700;
+
+/**
+ * Compiles a whole scene: one chapter, or a sequence of them.
+ *
+ * Animated, the chapters share the board — each is written, held, then wiped, and the next starts
+ * on a clean surface. Static, there is no time, so they stack down the page like a storyboard.
+ */
+function compile(scene: Scene) {
+  const chapters: Chapter[] = scene.scenes?.length ? scene.scenes : [{ items: scene.items ?? [] }];
+  const animated = (scene.mode ?? 'animation') !== 'static';
+  const all: DrawStroke[] = [];
+  const debug: [string, Rect][] = [];
+  const marks: { start: number; label?: string }[] = [];
+  let width = scene.width ?? 1000;
+  let height = 0, clock = 0, offsetY = 0;
+
+  chapters.forEach((chapter, i) => {
+    const part = compileChapter(scene, chapter.items ?? []);
+    const isLast = i === chapters.length - 1;
+    const hold = chapter.hold ?? (isLast ? 0 : HOLD_MS);
+    const clear = chapter.clear ?? (isLast ? false : 'fade');
+    const fade = clear === 'fade' ? CLEAR_MS : 0;
+    const goneAt = clock + part.end + hold;
+
+    marks.push({ start: clock, label: chapter.label });
+    for (const stroke of part.strokes) {
+      all.push({
+        ...stroke,
+        t0: stroke.t0 + clock,
+        pts: animated ? stroke.pts : stroke.pts.map(([x, y]) => [x, y + offsetY] as Pt),
+        gone: clear ? goneAt : Infinity,
+        fade,
+      });
+    }
+    for (const [id, r] of part.debug) debug.push([id, animated ? r : { ...r, y: r.y + offsetY }]);
+
+    width = part.width;
+    if (animated) height = Math.max(height, part.height);
+    else { height += part.height + (isLast ? 0 : 24); offsetY += part.height + 24; }
+    clock = goneAt + fade;
+  });
+
+  return { strokes: all, width, height: Math.max(160, height), end: clock, debug, chapters: marks };
+}
+
 // ─── DOM ──────────────────────────────────────────────────────────────────────
 
 const CSS = `
@@ -846,7 +916,9 @@ export function board(target: HTMLElement | string, scene: Scene, options: Parti
 }
 
 function build(el: HTMLElement, scene: Scene, options: Partial<Options>): Board {
-  if (!scene || !Array.isArray(scene.items)) throw new Error('a scene needs an "items" array');
+  if (!scene || (!Array.isArray(scene.items) && !Array.isArray(scene.scenes))) {
+    throw new Error('a scene needs an "items" array, or a "scenes" array of them');
+  }
   const opts: Options = {
     mode: options.mode ?? scene.mode ?? 'animation',
     autoplay: options.autoplay ?? scene.autoplay ?? 'visible',
@@ -856,7 +928,7 @@ function build(el: HTMLElement, scene: Scene, options: Partial<Options>): Board 
   };
   if (opts.mode !== 'animation' && opts.mode !== 'static') throw new Error(`mode must be "animation" or "static", not "${opts.mode}"`);
   const animated = opts.mode === 'animation';
-  const { strokes, width, height, end, debug } = compile(scene);
+  const { strokes, width, height, end, debug, chapters } = compile(scene);
   const bg = scene.background ?? '#0c0c0e';
   const uid = ++uidCounter;
 
@@ -907,6 +979,19 @@ function build(el: HTMLElement, scene: Scene, options: Partial<Options>): Board 
     let active = -1, prev = -1, next = -1, prevEnd = -Infinity, nextStart = Infinity;
     for (let i = 0; i < strokes.length; i++) {
       const s = strokes[i], p = els[i], L = lens[i];
+      const gone = s.gone ?? Infinity;
+      if (T >= gone) {                                 // this chapter has been wiped
+        const left = s.fade ? Math.max(0, 1 - (T - gone) / s.fade) : 0;
+        if (left <= 0) {
+          if (state[i] !== false) { p.style.visibility = 'hidden'; p.style.opacity = ''; state[i] = false; }
+        } else {
+          p.style.visibility = '';
+          p.style.opacity = String(left);
+          state[i] = undefined;
+        }
+        continue;
+      }
+      if (p.style.opacity) p.style.opacity = '';       // scrubbed back into the chapter's life
       const u = (T - s.t0) / s.dur;
       if (u <= 0) {
         if (state[i] !== false) { p.style.visibility = 'hidden'; state[i] = false; }
@@ -969,7 +1054,15 @@ function build(el: HTMLElement, scene: Scene, options: Partial<Options>): Board 
       soundInput.setAttribute('aria-label', soundOn ? 'Mute' : 'Unmute');
     }
     if (seekInput && !scrubbing) seekInput.value = String(Math.round((time / duration) * 1000));
-    if (timeLabel) timeLabel.textContent = `${fmt(Math.min(time, end))} / ${fmt(end)}`;
+    if (timeLabel) {
+      let prefix = '';
+      if (chapters.length > 1) {
+        let at = 0;
+        for (let i = 0; i < chapters.length; i++) if (time >= chapters[i].start) at = i;
+        prefix = `${chapters[at].label ?? at + 1 + '/' + chapters.length} · `;
+      }
+      timeLabel.textContent = `${prefix}${fmt(Math.min(time, end))} / ${fmt(end)}`;
+    }
   }
 
   function frame(now: number) {

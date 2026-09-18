@@ -1,6 +1,6 @@
 {
   "name": "@ghostmind-dev/sketch",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Hand-written explainer boards for the browser: one scene renders as a stroke-by-stroke animation (optional pencil and writing sound) or a static board.",
   "keywords": [
     "whiteboard",

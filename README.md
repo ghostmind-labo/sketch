@@ -20,7 +20,7 @@ sandboxed iframes and under a strict Content-Security-Policy (inline it there).
 ## Use it in a page
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/@ghostmind-dev/sketch@0.3.0/dist/sketch.iife.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@ghostmind-dev/sketch@0.4.0/dist/sketch.iife.js"></script>
 
 <script type="text/sketch">
 {
@@ -39,6 +39,32 @@ sandboxed iframes and under a strict Content-Security-Policy (inline it there).
 ```
 
 Change `"mode"` to `"static"` for the finished board with no animation.
+
+### Scenes
+
+A lesson is rarely one board. Give `scenes` instead of `items` and each is written, held, then
+wiped before the next begins — the way a teacher fills a board, clears it, and carries on:
+
+```json
+{
+  "scenes": [
+    { "label": "the claim",   "items": [ … ],                 "hold": 1400 },
+    { "label": "the squares", "items": [ … ], "clear": "cut" },
+    { "label": "in numbers",  "items": [ … ] }
+  ]
+}
+```
+
+| field | does |
+|---|---|
+| `items` | that scene's board, drawn from nothing |
+| `label` | named in the control bar while it plays |
+| `hold` | ms the finished board is held before it clears (default 1200) |
+| `clear` | `"fade"` (default), `"cut"`, or `false` to leave it up |
+
+**Ids live inside a scene**, so every scene may reuse `title`, `eq` and the rest without clashing.
+The last scene stays on the board. A **static** board has no time, so its scenes stack down the
+page as a storyboard instead of replacing each other.
 
 `Sketch.mount(root?)` renders every `<script type="text/sketch">` in place.
 `Sketch.board(el, scene, options)` does the same for one element (or a selector) and returns a

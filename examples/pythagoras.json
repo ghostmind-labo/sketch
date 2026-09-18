@@ -1,0 +1,43 @@
+{
+  "mode": "animation",
+  "pencil": true,
+  "width": 1000,
+  "height": 560,
+  "scenes": [
+    {
+      "label": "the claim",
+      "hold": 1400,
+      "items": [
+        { "type": "text", "id": "t", "x": 60, "y": 40, "size": 40, "color": "yellow", "text": "A right triangle has a secret" },
+        { "type": "underline", "under": "t", "color": "yellow" },
+        { "type": "line", "points": [[180, 420], [180, 180], [560, 420], [180, 420]], "smooth": false, "color": "cyan", "width": 3 },
+        { "type": "text", "id": "a", "x": 140, "y": 285, "size": 30, "color": "cyan", "text": "a" },
+        { "type": "text", "id": "b", "x": 350, "y": 436, "size": 30, "color": "cyan", "text": "b" },
+        { "type": "text", "id": "c", "x": 390, "y": 270, "size": 30, "color": "pink", "text": "c" },
+        { "type": "text", "id": "ask", "x": 640, "y": 250, "size": 32, "text": "how long is c ?" },
+        { "type": "arrow", "from": "ask.left", "to": "c", "bend": 0.2, "color": "pink" }
+      ]
+    },
+    {
+      "label": "the squares",
+      "hold": 1600,
+      "items": [
+        { "type": "text", "id": "t", "x": 60, "y": 40, "size": 40, "color": "yellow", "text": "Square each side" },
+        { "type": "text", "id": "sq", "x": 500, "y": 170, "align": "center", "size": 52, "text": "a^{2} + b^{2}" },
+        { "type": "text", "id": "eq", "below": "sq", "gap": 40, "align": "center", "size": 52, "color": "pink", "text": "= c^{2}" },
+        { "type": "box", "around": ["sq", "eq"], "pad": 34, "color": "pink" },
+        { "type": "text", "id": "n", "below": "eq", "gap": 80, "align": "center", "size": 26, "color": "grey", "text": "the two small squares fill the big one exactly" }
+      ]
+    },
+    {
+      "label": "in numbers",
+      "items": [
+        { "type": "text", "id": "t", "x": 60, "y": 40, "size": 40, "color": "yellow", "text": "So a 3, 4, 5 triangle closes" },
+        { "type": "text", "id": "w", "x": 500, "y": 170, "align": "center", "size": 46, "text": "3^{2} + 4^{2} = 9 + 16 = 25" },
+        { "type": "text", "id": "r", "below": "w", "gap": 46, "align": "center", "size": 46, "color": "green", "text": "√25 = 5" },
+        { "type": "circle", "around": "r", "color": "green" },
+        { "type": "text", "id": "qed", "below": "r", "gap": 90, "align": "center", "size": 30, "color": "grey", "text": "∴ c = 5 exactly, for every such triangle" }
+      ]
+    }
+  ]
+}
