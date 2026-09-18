@@ -70,6 +70,8 @@ function latin(file) {
     const tight = Math.min(adv + shift, max + shift + 110);
     glyphs[ch] = [round(Math.max(tight, max + shift - 40)), encode(strokes.map((s) => s.map(([x, y]) => [x + shift, y])))];
   }
+  // The maths minus is a different character from the hyphen, and a board uses it constantly.
+  if (glyphs['-']) glyphs['−'] = glyphs['-'];
   glyphs[' '] = [round((glyphs[' ']?.[0] ?? 375) * 0.8), ''];
   return glyphs;
 }
@@ -140,8 +142,9 @@ math['∥'] = math['‖'];
 // font, build them from strokes: every one is a few lines, a circle, or an existing glyph with
 // something added — deterministic, and they inherit the same weight as everything else.
 const poly = (...points) => points.map(([x, y]) => `${round(x)},${round(y)}`).join(' ');
-const ring = (cx, cy, r, n = 24) =>
-  poly(...Array.from({ length: n + 1 }, (_, i) => [cx + r * Math.cos((i / n) * 2 * Math.PI), cy + r * Math.sin((i / n) * 2 * Math.PI)]));
+const oval = (cx, cy, rx, ry, n = 28) =>
+  poly(...Array.from({ length: n + 1 }, (_, i) => [cx + rx * Math.cos((i / n) * 2 * Math.PI), cy + ry * Math.sin((i / n) * 2 * Math.PI)]));
+const ring = (cx, cy, r, n = 24) => oval(cx, cy, r, r, n);
 const glyph = (adv, ...strokes) => [adv, strokes.filter(Boolean).join(';')];
 /** An existing symbol with extra strokes laid over it (∈ + slash = ∉). */
 const over = (ch, ...strokes) => [math[ch][0], [math[ch][1], ...strokes].filter(Boolean).join(';')];
@@ -176,6 +179,8 @@ const composed = {
   '⟨': glyph(400, poly([300, -760], [110, -350], [300, 60])),
   '⟩': glyph(400, poly([100, -760], [290, -350], [100, 60])),
   '…': glyph(900, poly([120, -40], [160, -40]), poly([430, -40], [470, -40]), poly([740, -40], [780, -40])),
+  // θ is left to Hershey (the script form at its Greek slot). A composed oval-with-a-bar was
+  // tried and dropped: at text size it reads as a squat ɵ sitting below the other letters.
 };
 Object.assign(math, composed);
 

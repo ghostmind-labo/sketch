@@ -1,0 +1,672 @@
+{
+  "mode": "animation",
+  "pencil": true,
+  "width": 1000,
+  "height": 540,
+  "speed": 1.15,
+  "scenes": [
+    {
+      "label": "three strangers",
+      "hold": 1600,
+      "items": [
+        {
+          "type": "text",
+          "id": "t",
+          "x": 60,
+          "y": 36,
+          "size": 38,
+          "color": "yellow",
+          "text": "Three constants, three different worlds"
+        },
+        {
+          "type": "underline",
+          "under": "t",
+          "color": "yellow"
+        },
+        {
+          "type": "text",
+          "id": "e",
+          "x": 190,
+          "y": 170,
+          "align": "center",
+          "size": 76,
+          "color": "cyan",
+          "text": "e"
+        },
+        {
+          "type": "text",
+          "id": "en",
+          "below": "e",
+          "gap": 40,
+          "align": "center",
+          "size": 26,
+          "color": "cyan",
+          "text": "growth"
+        },
+        {
+          "type": "text",
+          "id": "en2",
+          "below": "en",
+          "gap": 16,
+          "align": "center",
+          "size": 21,
+          "color": "grey",
+          "text": "interest, decay,\npopulations"
+        },
+        {
+          "type": "text",
+          "id": "i",
+          "x": 500,
+          "y": 170,
+          "align": "center",
+          "size": 76,
+          "color": "pink",
+          "text": "i"
+        },
+        {
+          "type": "text",
+          "id": "in",
+          "below": "i",
+          "gap": 40,
+          "align": "center",
+          "size": 26,
+          "color": "pink",
+          "text": "rotation"
+        },
+        {
+          "type": "text",
+          "id": "in2",
+          "below": "in",
+          "gap": 16,
+          "align": "center",
+          "size": 21,
+          "color": "grey",
+          "text": "the number that\nturns a corner"
+        },
+        {
+          "type": "text",
+          "id": "p",
+          "x": 810,
+          "y": 170,
+          "align": "center",
+          "size": 76,
+          "color": "green",
+          "text": "π"
+        },
+        {
+          "type": "text",
+          "id": "pn",
+          "below": "p",
+          "gap": 40,
+          "align": "center",
+          "size": 26,
+          "color": "green",
+          "text": "circles"
+        },
+        {
+          "type": "text",
+          "id": "pn2",
+          "below": "pn",
+          "gap": 16,
+          "align": "center",
+          "size": 21,
+          "color": "grey",
+          "text": "half a turn,\nin radians"
+        },
+        {
+          "type": "text",
+          "id": "ask",
+          "x": 500,
+          "y": 458,
+          "align": "center",
+          "size": 28,
+          "text": "One line puts all three together."
+        }
+      ]
+    },
+    {
+      "label": "a strange power",
+      "hold": 1700,
+      "items": [
+        {
+          "type": "text",
+          "id": "t",
+          "x": 60,
+          "y": 36,
+          "size": 38,
+          "color": "yellow",
+          "text": "What could an imaginary power mean?"
+        },
+        {
+          "type": "text",
+          "id": "real",
+          "x": 70,
+          "y": 150,
+          "size": 30,
+          "text": "e^{2} stretches."
+        },
+        {
+          "type": "text",
+          "id": "imag",
+          "below": "real",
+          "gap": 26,
+          "size": 30,
+          "color": "pink",
+          "text": "e^{iθ} turns."
+        },
+        {
+          "type": "text",
+          "id": "note",
+          "below": "imag",
+          "gap": 40,
+          "size": 24,
+          "color": "grey",
+          "maxWidth": 360,
+          "text": "Multiplying by i is a quarter turn. A power of i keeps turning, and never grows."
+        },
+        {
+          "type": "line",
+          "points": [
+            [
+              540,
+              300
+            ],
+            [
+              960,
+              300
+            ]
+          ],
+          "smooth": false,
+          "color": "grey",
+          "width": 1.5
+        },
+        {
+          "type": "line",
+          "points": [
+            [
+              750,
+              130
+            ],
+            [
+              750,
+              470
+            ]
+          ],
+          "smooth": false,
+          "color": "grey",
+          "width": 1.5
+        },
+        {
+          "type": "line",
+          "points": [
+            [
+              870,
+              300
+            ],
+            [
+              869,
+              319
+            ],
+            [
+              864,
+              337
+            ],
+            [
+              857,
+              354
+            ],
+            [
+              847,
+              371
+            ],
+            [
+              835,
+              385
+            ],
+            [
+              821,
+              397
+            ],
+            [
+              804,
+              407
+            ],
+            [
+              787,
+              414
+            ],
+            [
+              769,
+              419
+            ],
+            [
+              750,
+              420
+            ],
+            [
+              731,
+              419
+            ],
+            [
+              713,
+              414
+            ],
+            [
+              696,
+              407
+            ],
+            [
+              679,
+              397
+            ],
+            [
+              665,
+              385
+            ],
+            [
+              653,
+              371
+            ],
+            [
+              643,
+              354
+            ],
+            [
+              636,
+              337
+            ],
+            [
+              631,
+              319
+            ],
+            [
+              630,
+              300
+            ],
+            [
+              631,
+              281
+            ],
+            [
+              636,
+              263
+            ],
+            [
+              643,
+              246
+            ],
+            [
+              653,
+              229
+            ],
+            [
+              665,
+              215
+            ],
+            [
+              679,
+              203
+            ],
+            [
+              696,
+              193
+            ],
+            [
+              713,
+              186
+            ],
+            [
+              731,
+              181
+            ],
+            [
+              750,
+              180
+            ],
+            [
+              769,
+              181
+            ],
+            [
+              787,
+              186
+            ],
+            [
+              804,
+              193
+            ],
+            [
+              821,
+              203
+            ],
+            [
+              835,
+              215
+            ],
+            [
+              847,
+              229
+            ],
+            [
+              857,
+              246
+            ],
+            [
+              864,
+              263
+            ],
+            [
+              869,
+              281
+            ],
+            [
+              870,
+              300
+            ]
+          ],
+          "color": "cyan",
+          "width": 2.4
+        },
+        {
+          "type": "line",
+          "points": [
+            [
+              750,
+              300
+            ],
+            [
+              835,
+              215
+            ]
+          ],
+          "smooth": false,
+          "color": "pink",
+          "width": 3
+        },
+        {
+          "type": "text",
+          "id": "th",
+          "x": 786,
+          "y": 262,
+          "size": 26,
+          "color": "pink",
+          "text": "θ"
+        },
+        {
+          "type": "text",
+          "id": "one",
+          "x": 878,
+          "y": 308,
+          "size": 22,
+          "color": "grey",
+          "text": "1"
+        }
+      ]
+    },
+    {
+      "label": "Euler's formula",
+      "hold": 1800,
+      "items": [
+        {
+          "type": "text",
+          "id": "t",
+          "x": 60,
+          "y": 36,
+          "size": 38,
+          "color": "yellow",
+          "text": "Euler saw where it lands"
+        },
+        {
+          "type": "text",
+          "id": "f",
+          "x": 500,
+          "y": 150,
+          "align": "center",
+          "size": 56,
+          "text": "e^{iθ} = \\id{c}{cos θ} + \\id{s}{i sin θ}"
+        },
+        {
+          "type": "box",
+          "around": "f",
+          "pad": 26,
+          "color": "cyan"
+        },
+        {
+          "type": "text",
+          "id": "cl",
+          "x": 300,
+          "y": 330,
+          "align": "center",
+          "size": 24,
+          "color": "green",
+          "text": "how far across"
+        },
+        {
+          "type": "arrow",
+          "from": "cl",
+          "to": "f.c",
+          "gap": 16,
+          "color": "green",
+          "bend": -0.2
+        },
+        {
+          "type": "text",
+          "id": "sl",
+          "x": 760,
+          "y": 330,
+          "align": "center",
+          "size": 24,
+          "color": "pink",
+          "text": "how far up"
+        },
+        {
+          "type": "arrow",
+          "from": "sl",
+          "to": "f.s",
+          "gap": 16,
+          "color": "pink",
+          "bend": 0.2
+        },
+        {
+          "type": "text",
+          "id": "n",
+          "x": 500,
+          "y": 430,
+          "align": "center",
+          "size": 26,
+          "color": "grey",
+          "text": "turning by θ puts you on the circle at angle θ"
+        }
+      ]
+    },
+    {
+      "label": "half a turn",
+      "hold": 1800,
+      "items": [
+        {
+          "type": "text",
+          "id": "t",
+          "x": 60,
+          "y": 36,
+          "size": 38,
+          "color": "yellow",
+          "text": "Now turn exactly half a circle"
+        },
+        {
+          "type": "text",
+          "id": "set",
+          "x": 500,
+          "y": 130,
+          "align": "center",
+          "size": 44,
+          "color": "green",
+          "text": "θ = π"
+        },
+        {
+          "type": "text",
+          "id": "c",
+          "x": 310,
+          "y": 235,
+          "align": "center",
+          "size": 36,
+          "text": "cos π = −1"
+        },
+        {
+          "type": "text",
+          "id": "s",
+          "x": 700,
+          "y": 235,
+          "align": "center",
+          "size": 36,
+          "text": "sin π = 0"
+        },
+        {
+          "type": "bracket",
+          "around": [
+            "c",
+            "s"
+          ],
+          "side": "bottom",
+          "color": "grey",
+          "pad": 16
+        },
+        {
+          "type": "text",
+          "id": "r",
+          "x": 500,
+          "y": 350,
+          "align": "center",
+          "size": 50,
+          "color": "pink",
+          "text": "e^{iπ} = −1"
+        },
+        {
+          "type": "circle",
+          "around": "r",
+          "color": "pink"
+        },
+        {
+          "type": "text",
+          "id": "n",
+          "below": "r",
+          "gap": 66,
+          "align": "center",
+          "size": 24,
+          "color": "grey",
+          "text": "half a turn from 1 lands on −1"
+        }
+      ]
+    },
+    {
+      "label": "the identity",
+      "items": [
+        {
+          "type": "text",
+          "id": "t",
+          "x": 60,
+          "y": 36,
+          "size": 38,
+          "color": "yellow",
+          "text": "Move the −1 across"
+        },
+        {
+          "type": "text",
+          "id": "id",
+          "x": 500,
+          "y": 140,
+          "align": "center",
+          "size": 76,
+          "text": "\\id{e}{e}^{\\id{i}{i}\\id{p}{π}} + \\id{one}{1} = \\id{zero}{0}"
+        },
+        {
+          "type": "box",
+          "around": "id",
+          "pad": 30,
+          "color": "yellow"
+        },
+        {
+          "type": "text",
+          "id": "le",
+          "x": 120,
+          "y": 340,
+          "align": "center",
+          "size": 22,
+          "color": "cyan",
+          "text": "growth"
+        },
+        {
+          "type": "arrow",
+          "from": "le",
+          "to": "id.e",
+          "gap": 14,
+          "color": "cyan",
+          "bend": -0.15
+        },
+        {
+          "type": "text",
+          "id": "li",
+          "x": 330,
+          "y": 396,
+          "align": "center",
+          "size": 22,
+          "color": "pink",
+          "text": "rotation"
+        },
+        {
+          "type": "arrow",
+          "from": "li",
+          "to": "id.i",
+          "gap": 14,
+          "color": "pink",
+          "bend": 0.15
+        },
+        {
+          "type": "text",
+          "id": "lp",
+          "x": 560,
+          "y": 396,
+          "align": "center",
+          "size": 22,
+          "color": "green",
+          "text": "circles"
+        },
+        {
+          "type": "arrow",
+          "from": "lp",
+          "to": "id.p",
+          "gap": 14,
+          "color": "green",
+          "bend": -0.15
+        },
+        {
+          "type": "text",
+          "id": "lz",
+          "x": 850,
+          "y": 340,
+          "align": "center",
+          "size": 22,
+          "color": "grey",
+          "maxWidth": 200,
+          "text": "and nothing\nleft over"
+        },
+        {
+          "type": "arrow",
+          "from": "lz",
+          "to": "id.zero",
+          "gap": 14,
+          "color": "grey",
+          "bend": 0.15
+        },
+        {
+          "type": "text",
+          "id": "end",
+          "x": 500,
+          "y": 470,
+          "align": "center",
+          "size": 30,
+          "text": "Five constants. One line. Nothing spare."
+        }
+      ]
+    }
+  ]
+}

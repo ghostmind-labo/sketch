@@ -73,10 +73,27 @@ controller (`play`, `pause`, `seek(ms)`, `restart`, `duration`); options (`mode`
 
 The board fills its container's width and sizes its own height, so no `100vh` or fixed height is needed.
 
+### Letting the reader set the pace
+
+A board can wait rather than run on. With `"advance": "click"` each scene stops the moment its
+board is complete, and a **next** button appears over it; the story continues when the reader asks.
+Good when a scene needs thinking about, and the natural partner to narration later.
+
+```json
+{ "advance": "click", "scenes": [ … ] }
+```
+
+A single scene can ask for it on its own (`"advance": "click"` inside that scene), or opt out of a
+board that otherwise waits (`"advance": "auto"`). The last scene never waits — there is nothing
+after it.
+
 ### Pencil and sound
 
-Both are off by default and apply to animations only. `"pencil": true` shows a stylus whose
-tip follows the stroke being written, lifting and gliding between strokes. `"sound": true`
+Both are off by default and apply to animations only. `"pencil": true` shows a tool whose
+tip follows the stroke being written, lifting and gliding between strokes. Pick one with
+`"pencil": "pencil" | "marker" | "chalk" | "stylus"` — a short yellow pencil, a chunky marker with
+a blunt nib, a chalk stub, or the long stylus (`true` means `pencil`; `false` or `"none"` draws
+nothing). `"sound": true`
 adds a writing sound, synthesised in the browser with Web Audio — noise shaped by the pen's
 speed, with a soft tap as each stroke begins; there are no audio files. Browsers only allow
 audio after a user gesture, so sound begins once the reader clicks play or taps the board (a
