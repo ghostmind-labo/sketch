@@ -8,7 +8,7 @@
 import { FONTS, MATH } from './glyphs.generated';
 import { createScratch } from './sound';
 
-export const version = '0.5.0';
+export const version = '0.6.0';
 
 /** Handwriting fonts a scene or text item can name. */
 export const fonts = Object.keys(FONTS);
@@ -85,8 +85,8 @@ export interface MarkItem extends Common {
   pad?: number;
   double?: boolean;
 }
-/** What holds the pen: a short pencil, a chunky marker, a chalk stub, or a long stylus. */
-export type PencilKind = 'pencil' | 'marker' | 'chalk' | 'stylus' | 'none';
+/** What holds the pen: a pencil, a crayon, a marker, a chalk pen, a chalk stub, or a stylus. */
+export type PencilKind = 'pencil' | 'crayon' | 'marker' | 'chalkpen' | 'chalk' | 'stylus' | 'none';
 
 export interface PauseItem { type: 'pause'; ms: number }
 export type Item = TextItem | ArrowItem | LineItem | MarkItem | PauseItem;
@@ -112,8 +112,12 @@ export interface Options {
   mode: 'animation' | 'static';
   /** true: play at once. 'visible': play the first time the board scrolls into view. false: wait for a tap. */
   autoplay: boolean | 'visible';
-  /** Play / scrub bar under an animated board. */
-  controls: boolean;
+  /**
+   * Play / scrub bar for an animated board. true: under the board. 'hover': laid over the board's
+   * bottom edge and shown only while the pointer is on it, so the board reads clean.
+   * false: no bar.
+   */
+  controls: boolean | 'hover';
   /**
    * Animation: something rides the tip of each stroke as it is written.
    * true is the same as 'pencil'; 'none' (or false) draws nothing.
@@ -853,6 +857,11 @@ const CSS = `
 .sketch-next{position:absolute;right:14px;bottom:12px;display:none;align-items:center;gap:7px;padding:7px 13px;border-radius:999px;background:rgba(240,240,235,.92);color:#16161a;font:600 13px/1 system-ui,sans-serif;cursor:pointer;border:0;box-shadow:0 2px 10px rgba(0,0,0,.35)}
 .sketch-next svg{width:13px;height:13px;fill:currentColor}
 .sketch-waiting .sketch-next{display:flex}
+.sketch-overlay .sketch-bar{position:absolute;left:0;right:0;bottom:0;padding:26px 10px 8px;color:#f4f4f0;background:linear-gradient(transparent,rgba(0,0,0,.55));opacity:0;transition:opacity .25s;line-height:1}
+.sketch-overlay .sketch-board:hover .sketch-bar,.sketch-overlay .sketch-bar:focus-within{opacity:1}
+.sketch-overlay .sketch-bar button:hover{background:rgba(255,255,255,.18)}
+.sketch-overlay .sketch-next{bottom:52px}
+@media (hover:none){.sketch-overlay .sketch-board:not(.sketch-playing) .sketch-bar{opacity:1}}
 .sketch-error{font:13px/1.45 ui-monospace,Menlo,monospace;color:#f45b73;padding:10px 12px;border:1px solid rgba(244,91,115,.45);border-radius:8px;white-space:pre-wrap}`;
 
 const ICON = {
@@ -866,21 +875,25 @@ const ICON = {
 
 /**
  * The tool at the pen tip, drawn with its point at the origin, lying along +x and then turned.
- * Each kind is a different length and build, because a long stylus dominates a small board:
- * a pencil is stubbier, a marker chunkier, chalk shorter still.
+ * Each kind is a different length and build, all kept short so the tool never dominates the
+ * board: a stylus is the longest, a crayon and a chalk stub the stubbiest. Parts marked
+ * `sketch-pencil-ink` take the colour being written — a pencil's ferrule, a pen's band, a whole crayon.
  */
 const TOOLS: Record<Exclude<PencilKind, 'none'>, { len: number; w: number; body: string; shade: string; tip: string; band: boolean }> = {
-  pencil:  { len: 210, w: 13, body: '#f0c24a', shade: '#b9761f', tip: '#e8d9b8', band: true },
-  marker:  { len: 150, w: 21, body: '#4a4a52', shade: '#26262c', tip: '#2e2e34', band: true },
-  chalk:   { len: 95,  w: 17, body: '#efeee9', shade: '#cfcdc4', tip: '#e2e0d8', band: false },
-  stylus:  { len: 320, w: 14, body: '#f3f2ee', shade: '#b9b6ae', tip: '#dedcd6', band: true },
+  pencil:  { len: 125, w: 13, body: '#f0c24a', shade: '#b9761f', tip: '#e8d9b8', band: true },
+  crayon:  { len: 80,  w: 16, body: '#f0c24a', shade: '#000000', tip: '#f0c24a', band: false },
+  marker:  { len: 105, w: 20, body: '#4a4a52', shade: '#26262c', tip: '#2e2e34', band: true },
+  chalkpen:{ len: 115, w: 14, body: '#f4f3ef', shade: '#c9c6bd', tip: '#f4f3ef', band: true },
+  chalk:   { len: 62,  w: 16, body: '#efeee9', shade: '#cfcdc4', tip: '#e2e0d8', band: false },
+  stylus:  { len: 185, w: 13, body: '#f3f2ee', shade: '#b9b6ae', tip: '#dedcd6', band: true },
 };
 
 function pencilSVG(uid: number, kind: Exclude<PencilKind, 'none'> = 'pencil'): string {
   const grad = `sketch-pencil-grad-${uid}`, blur = `sketch-pencil-blur-${uid}`;
   const tool = TOOLS[kind] ?? TOOLS.pencil;
   const half = tool.w / 2;
-  const nib = kind === 'marker' ? 16 : 24;          // a marker has a blunt nib, a pencil a point
+  // A marker and a chalk pen have a blunt nib, a crayon a worn cone, a pencil a point.
+  const nib = kind === 'marker' || kind === 'chalkpen' ? 16 : kind === 'crayon' ? 15 : 24;
   const bandW = tool.band ? 7 : 0;
   const bodyStart = nib + bandW;
   const bodyLen = tool.len - bodyStart;
@@ -892,6 +905,10 @@ function pencilSVG(uid: number, kind: Exclude<PencilKind, 'none'> = 'pencil'): s
         <stop offset=".4" stop-color="${tool.body}"/>
         <stop offset="1" stop-color="${shade}"/>
       </linearGradient>
+      <linearGradient id="${grad}-gloss" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#fff" stop-opacity=".4"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/>
+        <stop offset="1" stop-color="#000" stop-opacity=".35"/>
+      </linearGradient>
       <filter id="${blur}" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="6"/></filter>
     </defs>
     <g class="sketch-pencil-shadow"><g transform="rotate(58)" fill="#000" opacity=".42" filter="url(#${blur})">
@@ -899,15 +916,28 @@ function pencilSVG(uid: number, kind: Exclude<PencilKind, 'none'> = 'pencil'): s
       <rect x="${nib - 1}" y="-${half}" width="${tool.len - nib + 2}" height="${tool.w}" rx="${half * 0.7}"/>
     </g></g>
     <g class="sketch-pencil-body"><g transform="rotate(58)">
+      ${kind === 'crayon' ? crayonSVG(tool.len, half, nib, grad) : `
       <path d="M0,0 L${nib},-${half} L${nib},${half}Z" fill="${tool.tip}"/>
       ${kind === 'marker'
         ? `<path d="M0,-3.5 L10,-${half} L10,${half} L0,3.5Z" fill="#2a2a30"/>`
-        : `<path d="M0,0 L7,-1.9 L7,1.9Z" fill="#3a3a3e"/>`}
-      ${tool.band ? `<rect class="sketch-pencil-band" x="${nib}" y="-${half}" width="${bandW}" height="${tool.w}" fill="#f1f0ea"/>` : ''}
+        : kind === 'chalkpen'
+          ? `<path d="M0,-2.6 L9,-4.2 L9,4.2 L0,2.6Z" class="sketch-pencil-ink" fill="#f1f0ea"/><rect x="9" y="-${half}" width="${nib - 9}" height="${tool.w}" fill="#d6d3ca"/>`
+          : `<path d="M0,0 L7,-1.9 L7,1.9Z" fill="#3a3a3e"/>`}
+      ${tool.band ? `<rect class="sketch-pencil-ink" x="${nib}" y="-${half}" width="${bandW}" height="${tool.w}" fill="#f1f0ea"/>` : ''}
       <rect x="${bodyStart}" y="-${half}" width="${bodyLen}" height="${tool.w}" fill="url(#${grad})"/>
-      <path d="M${tool.len},-${half} h1 a${half},${half} 0 0 1 0,${tool.w} h-1Z" fill="${shade}"/>
+      <path d="M${tool.len},-${half} h1 a${half},${half} 0 0 1 0,${tool.w} h-1Z" fill="${shade}"/>`}
     </g></g>
   </g>`;
+}
+
+/** A wax crayon in the ink's colour: a worn cone, a paper wrapper, a flat end. */
+function crayonSVG(len: number, half: number, nib: number, gloss: string): string {
+  const wrapFrom = nib + 9, wrapTo = len - 7;
+  return `<path class="sketch-pencil-ink" d="M0,-2.4 Q1,-3 ${nib},-${half} L${nib},${half} Q1,3 0,2.4Z" fill="#f0c24a"/>
+      <rect class="sketch-pencil-ink" x="${nib}" y="-${half}" width="${len - nib}" height="${half * 2}" rx="1.5" fill="#f0c24a"/>
+      <rect x="${wrapFrom}" y="-${half}" width="${wrapTo - wrapFrom}" height="${half * 2}" fill="#efe6cf"/>
+      <path d="M${wrapFrom + 5},-${half} v${half * 2}M${wrapTo - 5},-${half} v${half * 2}" stroke="#1d1d22" stroke-opacity=".35" stroke-width="1.4"/>
+      <rect x="0" y="-${half}" width="${len}" height="${half * 2}" fill="url(#${gloss}-gloss)"/>`;
 }
 
 let styled = false;
@@ -978,9 +1008,17 @@ function build(el: HTMLElement, scene: Scene, options: Partial<Options>): Board 
   const dbg = scene.debug
     ? debug.map(([id, r]) => `<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" fill="none" stroke="#0ff" stroke-width="1" stroke-dasharray="4 3" opacity=".7"/><text x="${r.x}" y="${r.y - 4}" fill="#0ff" font-size="12" font-family="monospace">${id.replace(/[<&]/g, '')}</text>`).join('')
     : '';
+  if (opts.controls !== true && opts.controls !== false && opts.controls !== 'hover') {
+    throw new Error(`controls must be true, false or "hover", not "${opts.controls}"`);
+  }
+  const overlay = animated && opts.controls === 'hover';
   const soundBtn = opts.sound ? `<button class="sketch-sound" aria-label="Sound" aria-pressed="true">${ICON.soundOn}</button>` : '';
 
-  el.innerHTML = `<div class="sketch${animated ? ' sketch-animated' : ''}">
+  const bar = animated && opts.controls
+    ? `<div class="sketch-bar"><button class="sketch-play" aria-label="Play">${ICON.play}</button><input class="sketch-seek" type="range" min="0" max="1000" value="0" aria-label="Scrub">${soundBtn}<span class="sketch-time">0:00 / 0:00</span></div>`
+    : '';
+
+  el.innerHTML = `<div class="sketch${animated ? ' sketch-animated' : ''}${overlay ? ' sketch-overlay' : ''}">
     <div class="sketch-board" role="img" aria-label="Hand-drawn board">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}">
         ${bg === 'none' ? '' : `<rect width="${width}" height="${height}" fill="${bg}"/>`}
@@ -989,8 +1027,9 @@ function build(el: HTMLElement, scene: Scene, options: Partial<Options>): Board 
         ${animated && toolKind !== 'none' ? pencilSVG(uid, toolKind) : ''}
       </svg>
       ${animated ? `<button class="sketch-next" aria-label="Next scene">next ${ICON.next}</button>` : ''}
+      ${overlay ? bar : ''}
     </div>
-    ${animated && opts.controls ? `<div class="sketch-bar"><button class="sketch-play" aria-label="Play">${ICON.play}</button><input class="sketch-seek" type="range" min="0" max="1000" value="0" aria-label="Scrub">${soundBtn}<span class="sketch-time">0:00 / 0:00</span></div>` : ''}
+    ${overlay ? '' : bar}
   </div>`;
 
   // A static board is the finished drawing and nothing else: no timeline, no listeners.
@@ -1006,13 +1045,15 @@ function build(el: HTMLElement, scene: Scene, options: Partial<Options>): Board 
   const pencil = svg.querySelector<SVGGElement>('.sketch-pencil');
   const pencilBody = svg.querySelector<SVGGElement>('.sketch-pencil-body');
   const pencilShadow = svg.querySelector<SVGGElement>('.sketch-pencil-shadow');
-  const pencilBand = svg.querySelector<SVGElement>('.sketch-pencil-band');
+  const pencilInk = Array.from(svg.querySelectorAll<SVGElement>('.sketch-pencil-ink'));
+  let lastInk = -1;
   const pencilScale = (width / 1000) * 0.7;
   const offscreen: Pt = [width * 0.8 + 220, height + 240];
   const duration = end + 900;
 
   const wrap = el.querySelector<HTMLElement>('.sketch')!;
   const nextBtn = el.querySelector<HTMLButtonElement>('.sketch-next');
+  const board = el.querySelector<HTMLElement>('.sketch-board')!;
   /** Where playback stops and waits, in order: the end of every scene that asks to be held. */
   const gates = chapters
     .filter((c, i) => (c.advance ?? opts.advance) === 'click' && i < chapters.length - 1)
@@ -1077,7 +1118,6 @@ function build(el: HTMLElement, scene: Scene, options: Partial<Options>): Board 
       const s = strokes[active];
       const q = els[active].getPointAtLength(lens[active] * ease((T - s.t0) / s.dur));
       pos = [q.x, q.y];
-      if (pencilBand) pencilBand.setAttribute('fill', s.color);
     } else {
       // Pen lifted: glide from where the last stroke ended to where the next begins, raised a little.
       const from = prev >= 0 ? last(strokes[prev].pts) : offscreen;
@@ -1088,12 +1128,19 @@ function build(el: HTMLElement, scene: Scene, options: Partial<Options>): Board 
       pos = lerp(from, to, smoothstep(u));
       lift = Math.sin(Math.PI * u) * clamp(dist(from, to) * 0.15, 4, 30);
     }
+    // The ink-coloured parts keep a colour between strokes too: the one about to be written, else the last.
+    const inkFrom = active >= 0 ? active : next >= 0 ? next : prev;
+    if (inkFrom >= 0 && inkFrom !== lastInk) {
+      lastInk = inkFrom;
+      for (const part of pencilInk) part.setAttribute('fill', strokes[inkFrom].color);
+    }
     const k = pencilScale * (1 + lift * 0.004);
     pencilBody.setAttribute('transform', `translate(${pos[0]} ${pos[1] - lift}) scale(${k})`);
     pencilShadow.setAttribute('transform', `translate(${pos[0] + 5 + lift * 0.8} ${pos[1] + 7 + lift * 0.6}) scale(${pencilScale})`);
   }
 
   function ui() {
+    board.classList.toggle('sketch-playing', playing);
     if (playBtn) {
       const done = !playing && time >= duration;
       playBtn.innerHTML = playing ? ICON.pause : done ? ICON.replay : ICON.play;
@@ -1186,6 +1233,8 @@ function build(el: HTMLElement, scene: Scene, options: Partial<Options>): Board 
   nextBtn?.addEventListener('click', (e) => { e.stopPropagation(); api.play(); });
   svg.parentElement!.addEventListener('click', toggle);
   playBtn?.addEventListener('click', toggle);
+  // Laid over the board, the bar's clicks would also reach the board and toggle it twice.
+  el.querySelector('.sketch-bar')?.addEventListener('click', (e) => e.stopPropagation());
   soundInput?.addEventListener('click', () => api.setSound(!soundOn));
   seekInput?.addEventListener('input', () => {
     scrubbing = true;
