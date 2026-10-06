@@ -13,14 +13,14 @@ boxes — are drawn with a hand's wobble and overshoot. Text and maths stay cris
 reads easily. Nothing is a filled outline, so everything can be revealed along the path the
 pen took.
 
-One IIFE file (`dist/sketch.iife.js`, ~68 KB) defines the global `Sketch`. It needs no
+One IIFE file (`dist/sketch.iife.js`, ~70 KB) defines the global `Sketch`. It needs no
 network, no workers and no web fonts, and does nothing until called — so it also runs in
 sandboxed iframes and under a strict Content-Security-Policy (inline it there).
 
 ## Use it in a page
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/@ghostmind-dev/sketch@0.5.0/dist/sketch.iife.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@ghostmind-dev/sketch@0.6.0/dist/sketch.iife.js"></script>
 
 <script type="text/sketch">
 {
@@ -71,6 +71,10 @@ page as a storyboard instead of replacing each other.
 controller (`play`, `pause`, `seek(ms)`, `restart`, `duration`); options (`mode`, `autoplay`,
 `controls`) override the scene's. A static board's controller does nothing.
 
+`"controls": "hover"` keeps the board clean: the bar is laid over its bottom edge and appears
+only while the pointer is on the board (on touch screens, whenever it is paused), so nothing sits
+under the board and the reader sees the drawing alone.
+
 The board fills its container's width and sizes its own height, so no `100vh` or fixed height is needed.
 
 ### Letting the reader set the pace
@@ -91,9 +95,11 @@ after it.
 
 Both are off by default and apply to animations only. `"pencil": true` shows a tool whose
 tip follows the stroke being written, lifting and gliding between strokes. Pick one with
-`"pencil": "pencil" | "marker" | "chalk" | "stylus"` — a short yellow pencil, a chunky marker with
-a blunt nib, a chalk stub, or the long stylus (`true` means `pencil`; `false` or `"none"` draws
-nothing). `"sound": true`
+`"pencil": "pencil" | "crayon" | "marker" | "chalkpen" | "chalk" | "stylus"` — a short yellow
+pencil, a wax crayon, a chunky marker with a blunt nib, a white chalk pen, a chalk stub, or a
+slim stylus (`true` means `pencil`; `false` or `"none"` draws nothing). All are kept short so the
+tool never dominates the board. The crayon's wax and the band on the pencil, marker, chalk pen
+and stylus take the colour being written. `"sound": true`
 adds a writing sound, synthesised in the browser with Web Audio — noise shaped by the pen's
 speed, with a soft tap as each stroke begins; there are no audio files. Browsers only allow
 audio after a user gesture, so sound begins once the reader clicks play or taps the board (a
@@ -118,8 +124,8 @@ one with `"font"`. Greek and maths symbols come from a shared set and work regar
   "font": "readability",  // text font; `Sketch.fonts` lists what the bundle includes (a text item can set its own)
   "speed": 1,             // animation: playback speed multiplier
   "autoplay": "visible",  // animation: true | false | "visible" (first time it scrolls into view)
-  "controls": true,       // animation: play / scrub bar under the board
-  "pencil": false,        // animation: the tool at the pen tip — "pencil" | "marker" | "chalk" | "stylus" | "none"
+  "controls": true,       // animation: play / scrub bar — true (under the board) | "hover" (over it, only while pointed at) | false
+  "pencil": false,        // animation: the tool at the pen tip — "pencil" | "crayon" | "marker" | "chalkpen" | "chalk" | "stylus" | "none"
   "advance": "auto",      // animation: "click" waits for the reader at the end of each scene
   "sound": false,         // animation: a synthesised writing sound that follows the pen (adds a mute button)
   "seed": 0,              // change for different handwriting on the same scene

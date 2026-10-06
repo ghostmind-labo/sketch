@@ -10,6 +10,7 @@
         "tabs": [
           {
             "label": "dev",
+            "prefix": false,
             "layout": "compact",
             "focus": true,
             "compact": {
@@ -19,6 +20,7 @@
           },
           {
             "label": "shell",
+            "prefix": false,
             "layout": "compact",
             "compact": {
               "type": "single",
